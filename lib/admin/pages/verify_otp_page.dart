@@ -58,8 +58,6 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     if (result.success) {
       if (result.role == 'ADMIN') {
         Navigator.pushReplacementNamed(context, '/admin');
-      } else {
-        Navigator.pushReplacementNamed(context, '/customer');
       }
     } else {
       setState(() {

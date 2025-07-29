@@ -3,8 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decode/jwt_decode.dart';
 
-final storage = FlutterSecureStorage();
-
 class ApiResult {
   final bool success;
   final bool requireOtp;
@@ -20,6 +18,7 @@ class ApiResult {
 
 class ApiService {
   static const base = 'http://10.0.2.2:8080/api/auth';
+  static final storage = FlutterSecureStorage();
 
   static Future<ApiResult> login(String user, String pass) async {
     final res = await http.post(
@@ -27,6 +26,7 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': user, 'password': pass}),
     );
+    print(res.statusCode);
     if (res.statusCode == 200) {
       final d = jsonDecode(res.body);
       final token = d['token'];
@@ -52,14 +52,24 @@ class ApiService {
 
       final res = await http.post(
         Uri.parse('$base/verify-2fa'),
-        headers: {'Authorization': 'Bearer \$token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({'email': email, 'code': otp}),
       );
-      print(email);
+      print(payload);
       print(res.statusCode);
       if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        return ApiResult(success: true, role: d['role']);
+        final List roles = payload['authorities'] ?? [];
+
+        String? role;
+        if (roles.isNotEmpty && roles.first is String) {
+          role = (roles.first as String).replaceAll('ROLE_', '');
+        }
+
+        print('ROLE: $role');
+        return ApiResult(success: true, role: role!);
       }
     }
     return ApiResult(success: false, message: 'Invalid OTP.');
