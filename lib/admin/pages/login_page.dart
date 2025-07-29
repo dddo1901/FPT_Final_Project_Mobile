@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fpt_final_project_mobile/admin/utils/api_service.dart';
+import 'package:fpt_final_project_mobile/admin/services/api_service.dart';
 import '../widgets/loading_overlay.dart';
 
 class LoginPage extends StatefulWidget {
@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: [
                   const Text(
-                    'Your App Logo',
+                    'Pizza',
                     style: TextStyle(fontSize: 32, color: Colors.white),
                   ),
                   const SizedBox(height: 40),

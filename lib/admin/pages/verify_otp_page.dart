@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:fpt_final_project_mobile/admin/utils/api_service.dart';
+import 'package:fpt_final_project_mobile/admin/services/api_service.dart';
 import '../widgets/loading_overlay.dart';
 
 class VerifyOtpPage extends StatefulWidget {
@@ -18,10 +18,15 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   late Timer _countdown;
 
   @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
   void didChangeDependencies() {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     username = args['username'];
-    _startTimer();
     super.didChangeDependencies();
   }
 
@@ -30,45 +35,63 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     _countdown = Timer.periodic(const Duration(seconds: 1), (t) {
       if (timer <= 0) {
         t.cancel();
-        setState(() {});
+        if (mounted) setState(() {});
       } else {
-        setState(() {
-          timer--;
-        });
+        if (mounted)
+          setState(() {
+            timer--;
+          });
       }
     });
   }
 
   Future<void> _resend() async {
     await ApiService.resendOtp(username);
-    _startTimer();
+    _countdown.cancel(); // Hủy timer cũ
+    _startTimer(); // Bắt đầu timer mới
   }
 
   Future<void> _verify() async {
+    if (loading) return;
+
     setState(() {
       loading = true;
       error = '';
     });
-    final result = await ApiService.verifyOtp(_otp.text);
 
-    setState(() {
-      loading = false;
-    });
+    try {
+      final result = await ApiService.verifyOtp(_otp.text);
 
-    if (result.success) {
-      if (result.role == 'ADMIN') {
-        Navigator.pushReplacementNamed(context, '/admin');
-      }
-    } else {
+      if (!mounted) return;
+
       setState(() {
-        error = result.message;
+        loading = false;
       });
+
+      if (result.success) {
+        _countdown.cancel(); // Hủy timer trước khi chuyển trang
+        if (result.role == 'ADMIN') {
+          Navigator.pushReplacementNamed(context, '/admin');
+        }
+      } else {
+        setState(() {
+          error = result.message;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          loading = false;
+          error = 'An error occurred. Please try again.';
+        });
+      }
     }
   }
 
   @override
   void dispose() {
     _countdown.cancel();
+    _otp.dispose();
     super.dispose();
   }
 
@@ -88,6 +111,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
                   TextField(
                     controller: _otp,
                     decoration: const InputDecoration(labelText: 'OTP'),
+                    keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(

@@ -31,6 +31,7 @@ class ApiService {
       final d = jsonDecode(res.body);
       final token = d['token'];
       await storage.write(key: 'token', value: token);
+      await storage.write(key: 'username', value: user);
       return ApiResult(success: true);
     }
     return ApiResult(success: false, message: 'Login failed');
@@ -58,8 +59,6 @@ class ApiService {
         },
         body: jsonEncode({'email': email, 'code': otp}),
       );
-      print(payload);
-      print(res.statusCode);
       if (res.statusCode == 200) {
         final List roles = payload['authorities'] ?? [];
 
@@ -101,7 +100,6 @@ class ApiService {
   // }
 
   static Future<void> logout() async {
-    await storage.delete(key: 'token');
-    await storage.delete(key: 'role');
+    await storage.deleteAll();
   }
 }
