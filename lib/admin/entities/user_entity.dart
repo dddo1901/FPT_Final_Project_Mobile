@@ -1,22 +1,20 @@
 class UserEntity {
   final String id;
   final String username;
-  final String? name;
-  final String? email;
-  final String? phone;
-  final String role;
+  final String name;
+  final String email;
+  final String phone;
   final String? imageUrl;
-  final StaffProfileEntity? staffProfile;
+  final String role;
 
   UserEntity({
     required this.id,
     required this.username,
-    this.name,
-    this.email,
-    this.phone,
-    required this.role,
+    required this.name,
+    required this.email,
+    required this.phone,
     this.imageUrl,
-    this.staffProfile,
+    required this.role,
   });
 
   @override
@@ -26,28 +24,4 @@ class UserEntity {
 
   @override
   int get hashCode => id.hashCode;
-}
-
-class StaffProfileEntity {
-  final String? staffCode;
-  final String? status;
-  final String? position;
-  final String? shiftType;
-  final String? workLocation;
-  final String? address;
-  final String? gender;
-  final String? dob;
-  final String? joinDate;
-
-  StaffProfileEntity({
-    this.staffCode,
-    this.status,
-    this.position,
-    this.shiftType,
-    this.workLocation,
-    this.address,
-    this.gender,
-    this.dob,
-    this.joinDate,
-  });
 }

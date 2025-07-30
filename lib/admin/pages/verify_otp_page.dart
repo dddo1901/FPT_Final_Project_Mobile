@@ -37,10 +37,11 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         t.cancel();
         if (mounted) setState(() {});
       } else {
-        if (mounted)
+        if (mounted) {
           setState(() {
             timer--;
           });
+        }
       }
     });
   }

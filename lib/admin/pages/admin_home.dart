@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_page.dart';
-import 'package:fpt_final_project_mobile/admin/pages/user_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -163,8 +161,9 @@ class _AdminHomeState extends State<AdminHome> {
   ) {
     return InkWell(
       onTap: () {
-        if (page != null)
+        if (page != null) {
           Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        }
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

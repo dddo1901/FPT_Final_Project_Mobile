@@ -6,7 +6,7 @@ class UserCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
-  const UserCard({
+  const UserCard({super.key, 
     required this.user,
     required this.onTap,
     required this.onLongPress,
@@ -68,8 +68,8 @@ class UserCard extends StatelessWidget {
 
       return CircleAvatar(
         backgroundColor: Colors.blue,
-        child: Text(initials, style: TextStyle(color: Colors.white)),
         radius: 20,
+        child: Text(initials, style: TextStyle(color: Colors.white)),
       );
     }
   }

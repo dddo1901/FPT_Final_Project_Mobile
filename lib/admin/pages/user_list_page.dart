@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:fpt_final_project_mobile/admin/entities/user_entity.dart';
+import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
 import 'package:fpt_final_project_mobile/admin/services/user_service.dart';
 import '../widgets/user_card.dart';
 
 class UserListPage extends StatefulWidget {
+  const UserListPage({super.key});
+
   @override
   _UserListPageState createState() => _UserListPageState();
 }
 
 class _UserListPageState extends State<UserListPage> {
-  late Future<List<UserEntity>> _usersFuture;
+  late Future<List<UserModel>> _usersFuture;
   late UserService _userService;
   String _searchTerm = '';
   String _roleFilter = 'ALL';
@@ -19,18 +21,16 @@ class _UserListPageState extends State<UserListPage> {
   @override
   void initState() {
     super.initState();
-    _userService = UserService(
-      baseUrl: 'http://your-api-url.com', // Replace with your actual API URL
-      token: 'your-auth-token', // Replace with your actual token
-    );
+    _userService = UserService(baseUrl: 'http://10.0.2.2:8080');
     _usersFuture = _fetchUsers();
+    print(_usersFuture);
   }
 
-  Future<List<UserEntity>> _fetchUsers() async {
+  Future<List<UserModel>> _fetchUsers() async {
     return await _userService.getUsers();
   }
 
-  List<UserEntity> _filterUsers(List<UserEntity> users) {
+  List<UserModel> _filterUsers(List<UserModel> users) {
     return users.where((user) {
       final matchesSearch =
           _searchTerm.isEmpty ||
@@ -92,7 +92,7 @@ class _UserListPageState extends State<UserListPage> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<UserEntity>>(
+            child: FutureBuilder<List<UserModel>>(
               future: _usersFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -124,12 +124,12 @@ class _UserListPageState extends State<UserListPage> {
     );
   }
 
-  void _navigateToUserForm(BuildContext context, [UserEntity? user]) async {
+  void _navigateToUserForm(BuildContext context, [UserModel? user]) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
-            UserFormPage(userService: _userService, user: user),
+            UserFormPage(userService: _userService, initialUser: user),
       ),
     );
 
@@ -150,7 +150,7 @@ class _UserListPageState extends State<UserListPage> {
     );
   }
 
-  void _showUserActions(BuildContext context, UserEntity user) {
+  void _showUserActions(BuildContext context, UserModel user) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Column(
@@ -185,7 +185,7 @@ class _UserListPageState extends State<UserListPage> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, UserEntity user) {
+  void _showDeleteConfirmation(BuildContext context, UserModel user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

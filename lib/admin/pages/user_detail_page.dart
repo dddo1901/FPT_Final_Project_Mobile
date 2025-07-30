@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fpt_final_project_mobile/admin/entities/user_entity.dart';
+import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
 import 'package:fpt_final_project_mobile/admin/services/user_service.dart';
 import 'package:provider/provider.dart';
@@ -8,14 +8,18 @@ class UserDetailPage extends StatefulWidget {
   final String userId;
   final UserService userService;
 
-  const UserDetailPage({required this.userId, required this.userService});
+  const UserDetailPage({
+    super.key,
+    required this.userId,
+    required this.userService,
+  });
 
   @override
   _UserDetailPageState createState() => _UserDetailPageState();
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
-  late Future<UserEntity> _userFuture;
+  late Future<UserModel> _userFuture;
 
   @override
   void initState() {
@@ -23,7 +27,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     _userFuture = _fetchUserDetails();
   }
 
-  Future<UserEntity> _fetchUserDetails() async {
+  Future<UserModel> _fetchUserDetails() async {
     final userService = Provider.of<UserService>(context, listen: false);
     return await userService.getUserById(widget.userId);
   }
@@ -40,7 +44,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ),
         ],
       ),
-      body: FutureBuilder<UserEntity>(
+      body: FutureBuilder<UserModel>(
         future: _userFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -58,7 +62,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 
-  Widget _buildUserDetails(UserEntity user) {
+  Widget _buildUserDetails(UserModel user) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -79,7 +83,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
       MaterialPageRoute(
         builder: (context) => UserFormPage(
           userService: widget.userService, // Thêm dòng này
-          user: user,
+          initialUser: user,
         ),
       ),
     );
