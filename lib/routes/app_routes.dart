@@ -7,6 +7,8 @@ import 'package:fpt_final_project_mobile/admin/pages/admin_home.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_form_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_list_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/order_detail_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/order_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/table_detail_page.dart';
 
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
@@ -77,6 +79,10 @@ final Map<String, WidgetBuilder> appRoutes = {
       const RoleGuard(allowed: ['ADMIN'], child: FoodListPage()),
   '/admin/foods/create': (_) =>
       const RoleGuard(allowed: ['ADMIN'], child: FoodFormPage()),
+
+  // 🔐 Admin Orders
+  '/admin/orders': (_) =>
+      const RoleGuard(allowed: ['ADMIN'], child: OrderListPage()),
 
   // ==================== STAFF ====================
 
@@ -261,6 +267,28 @@ Route<dynamic>? onGenerateRoute(RouteSettings s) {
           builder: (_) => RoleGuard(
             allowed: const ['ADMIN'],
             child: FoodDetailPage(foodId: id),
+          ),
+          settings: s,
+        );
+      }
+
+    // ----- Order -----
+    case '/admin/orders/detail':
+      {
+        final id = s.arguments as String?;
+        debugPrint('➡️ onGenerateRoute /admin/orders/detail id=$id'); // debug
+        if (id == null || id.isEmpty) {
+          return MaterialPageRoute(
+            builder: (_) => const NotFoundPage(
+              routeName: '/admin/orders/detail (missing id)',
+            ),
+            settings: s,
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => RoleGuard(
+            allowed: const ['ADMIN'],
+            child: OrderDetailPage(orderId: id), // ✅ không phải SizedBox
           ),
           settings: s,
         );

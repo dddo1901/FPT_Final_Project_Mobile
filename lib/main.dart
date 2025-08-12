@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fpt_final_project_mobile/admin/services/food_service.dart';
+import 'package:fpt_final_project_mobile/admin/services/order_service.dart';
 import 'package:fpt_final_project_mobile/middleware/token_client.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -59,6 +60,10 @@ void main() {
         ProxyProvider<ApiService, FoodService>(
           update: (_, api, __) =>
               FoodService(baseUrl: kBaseUrl, client: api.client),
+        ),
+        ProxyProvider<ApiService, OrderService>(
+          update: (_, api, __) =>
+              OrderService(baseUrl: kBaseUrl, client: api.client),
         ),
       ],
       child: const MyApp(),
