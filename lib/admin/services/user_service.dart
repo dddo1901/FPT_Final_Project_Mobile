@@ -17,7 +17,6 @@ class UserService {
       Uri.parse('http://10.0.2.2:8080/api/auth/users'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    print(response.body);
     if (response.statusCode == 200) {
       final jsonString = utf8.decode(response.bodyBytes);
       final data = json.decode(jsonString) as List<dynamic>;
@@ -38,7 +37,8 @@ class UserService {
     );
 
     if (response.statusCode == 200) {
-      return UserModel.fromJson(json.decode(response.body));
+      final jsonString = utf8.decode(response.bodyBytes);
+      return UserModel.fromJson(json.decode(jsonString));
     } else {
       throw Exception('Failed to load user details');
     }
@@ -62,8 +62,7 @@ class UserService {
     req.fields['email'] = user.email ?? '';
     req.fields['phone'] = user.phone ?? '';
     req.fields['role'] = user.role;
-    req.fields['password'] =
-        password; // bắt buộc :contentReference[oaicite:6]{index=6}
+    req.fields['password'] = password;
 
     // staffProfile nếu có
     if (user.staffProfile != null) {
@@ -86,7 +85,7 @@ class UserService {
     final res = await http.Response.fromStream(streamed);
 
     if (res.statusCode == 200) {
-      return UserModel.fromJson(json.decode(res.body));
+      return user;
     } else {
       throw Exception('Failed to create user: ${res.statusCode} ${res.body}');
     }
@@ -135,9 +134,8 @@ class UserService {
 
     final streamed = await req.send();
     final res = await http.Response.fromStream(streamed);
-
     if (res.statusCode == 200) {
-      return UserModel.fromJson(json.decode(res.body));
+      return user;
     } else {
       throw Exception('Failed to update user: ${res.statusCode} ${res.body}');
     }

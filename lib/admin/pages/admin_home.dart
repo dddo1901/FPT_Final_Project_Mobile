@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/table_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -63,6 +64,15 @@ class _AdminHomeState extends State<AdminHome> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => FoodPage()),
+                  );
+                  break;
+                case 'table':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TableListPage(service: tableService),
+                    ),
                   );
                   break;
                 case 'edit':

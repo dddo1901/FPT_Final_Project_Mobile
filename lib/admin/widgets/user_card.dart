@@ -6,7 +6,8 @@ class UserCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
-  const UserCard({super.key, 
+  const UserCard({
+    super.key,
     required this.user,
     required this.onTap,
     required this.onLongPress,
@@ -58,7 +59,7 @@ class UserCard extends StatelessWidget {
       );
     } else {
       final initials = user.name != null
-          ? user.name!
+          ? user.name
                 .split(' ')
                 .map((n) => n[0])
                 .join('')

@@ -9,8 +9,7 @@ class UserFormPage extends StatefulWidget {
   final UserService userService;
   final UserModel? initialUser; // null = tạo mới, không null = edit
 
-  const UserFormPage({Key? key, required this.userService, this.initialUser})
-    : super(key: key);
+  const UserFormPage({super.key, required this.userService, this.initialUser});
 
   @override
   _UserFormPageState createState() => _UserFormPageState();
@@ -32,7 +31,7 @@ class _UserFormPageState extends State<UserFormPage> {
   late TextEditingController _dobC;
   late TextEditingController _workLocC;
 
-  String _role = 'CUSTOMER';
+  String _role = 'STAFF';
   String _gender = 'Male';
 
   File? _avatarFile;
@@ -54,7 +53,7 @@ class _UserFormPageState extends State<UserFormPage> {
     _workLocC = TextEditingController(
       text: u?.staffProfile?.workLocation ?? '',
     );
-    _role = u?.role ?? 'CUSTOMER';
+    _role = u?.role ?? 'STAFF';
     _gender = u?.staffProfile?.gender ?? 'Male';
     if (u?.imageUrl != null) {
       // TODO: fetch network image into File? hoặc giữ preview URL
@@ -87,29 +86,29 @@ class _UserFormPageState extends State<UserFormPage> {
 
   // Validation helpers
   String? _validateNotEmpty(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'Không được để trống' : null;
+      (v == null || v.trim().isEmpty) ? 'Cant be not null' : null;
 
   String? _validateEmail(String? v) {
     if (v == null || v.trim().isEmpty) return 'Email required';
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)
         ? null
-        : 'Email không đúng';
+        : 'Email is not right';
   }
 
   String? _validatePhone(String? v) =>
-      (v == null || !RegExp(r'^\d{10}$').hasMatch(v)) ? '10 chữ số' : null;
+      (v == null || !RegExp(r'^\d{10}$').hasMatch(v)) ? '10 numbers' : null;
 
   String? _validatePassword(String? v) {
     if (widget.initialUser != null && (v == null || v.isEmpty)) return null;
-    if (v == null || v.length < 6) return '≥6 ký tự';
-    if (!RegExp(r'(?=.*[0-9])').hasMatch(v)) return 'Cần số';
-    if (!RegExp(r'(?=.*[A-Za-z])').hasMatch(v)) return 'Cần chữ';
+    if (v == null || v.length < 6) return '≥6 charecters';
+    if (!RegExp(r'(?=.*[0-9])').hasMatch(v)) return 'Need numbers';
+    if (!RegExp(r'(?=.*[A-Za-z])').hasMatch(v)) return 'Need characters';
     return null;
   }
 
   String? _validateConfirm(String? v) {
     if (_validatePassword(_passwordC.text) != null) return null;
-    return v != _passwordC.text ? 'Không khớp' : null;
+    return v != _passwordC.text ? 'It is not correct!!!' : null;
   }
 
   bool _stepValid(int idx) {
@@ -256,7 +255,7 @@ class _UserFormPageState extends State<UserFormPage> {
                   // Role dropdown
                   DropdownButtonFormField<String>(
                     value: _role,
-                    items: ['ADMIN', 'STAFF', 'CUSTOMER', 'SHIPPER']
+                    items: ['ADMIN', 'STAFF', 'SHIPPER']
                         .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                         .toList(),
                     onChanged: (v) => setState(() => _role = v!),
@@ -289,8 +288,9 @@ class _UserFormPageState extends State<UserFormPage> {
                           firstDate: DateTime(1900),
                           lastDate: DateTime.now(),
                         );
-                        if (d != null)
+                        if (d != null) {
                           _dobC.text = d.toIso8601String().split('T').first;
+                        }
                       },
                       readOnly: true,
                       validator: _validateNotEmpty,
