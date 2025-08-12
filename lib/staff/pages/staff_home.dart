@@ -3,10 +3,10 @@ import 'package:fpt_final_project_mobile/widgets/ui_actions.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
-import '../../widgets/ui_actions.dart';
 
-class AdminHome extends StatelessWidget {
-  const AdminHome({super.key});
+class StaffHome extends StatelessWidget {
+  final String userId; // staff hiện tại
+  const StaffHome({super.key, required this.userId});
 
   void _go(BuildContext context, String route, {Object? args}) {
     Navigator.pushNamed(context, route, arguments: args);
@@ -20,15 +20,15 @@ class AdminHome extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final claims = _claimsFromJwt(auth.token);
     final displayName = claims.name ?? 'Unknown';
-    final role = (claims.role ?? 'ADMIN').toUpperCase();
+    final role = (claims.role ?? 'STAFF').toUpperCase();
     final avatarUrl = claims.avatarUrl;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: const Text('Staff Dashboard'),
         actions: [
           GestureDetector(
-            onTap: () => _go(context, '/admin/profile'),
+            onTap: () => Navigator.pushNamed(context, '/staff/profile'),
             child: Padding(
               padding: const EdgeInsets.only(right: 12),
               child: CircleAvatar(
@@ -46,11 +46,12 @@ class AdminHome extends StatelessWidget {
         ],
       ),
 
-      drawer: _AdminDrawer(
+      drawer: _StaffDrawer(
         onNavigate: (route, {args}) => _go(context, route, args: args),
         displayName: displayName,
         role: role,
         avatarUrl: avatarUrl,
+        userId: userId,
       ),
 
       body: Padding(
@@ -60,30 +61,28 @@ class AdminHome extends StatelessWidget {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           children: [
-            _AdminCard(
-              icon: Icons.group,
-              title: 'Users',
-              subtitle: 'Manage users & roles',
+            _StaffCard(
+              icon: Icons.person,
+              title: 'My Profile',
+              subtitle: 'View & update your info',
               color: Colors.indigo,
-              onTap: () => _go(context, '/admin/users'),
+              onTap: () => _go(context, '/staff/profile'),
             ),
-            _AdminCard(
+            _StaffCard(
               icon: Icons.table_restaurant,
               title: 'Tables',
-              subtitle: 'List, detail & QR',
+              subtitle: 'List & detail',
               color: Colors.teal,
               onTap: () => _go(context, '/admin/tables'),
-              onLongPress: () => _go(context, '/admin/tables/create'),
             ),
-            _AdminCard(
+            _StaffCard(
               icon: Icons.fastfood,
               title: 'Foods',
-              subtitle: 'Menu, status & images',
+              subtitle: 'Menu & status',
               color: Colors.orange,
               onTap: () => _go(context, '/admin/foods'),
-              onLongPress: () => _go(context, '/admin/foods/create'),
             ),
-            _AdminCard(
+            _StaffCard(
               icon: Icons.receipt_long,
               title: 'Orders',
               subtitle: 'Incoming & history (placeholder)',
@@ -97,16 +96,19 @@ class AdminHome extends StatelessWidget {
   }
 }
 
-class _AdminDrawer extends StatelessWidget {
+class _StaffDrawer extends StatelessWidget {
   final void Function(String route, {Object? args}) onNavigate;
   final String displayName;
   final String role;
   final String? avatarUrl;
-  const _AdminDrawer({
+  final String userId;
+
+  const _StaffDrawer({
     required this.onNavigate,
     required this.displayName,
     required this.role,
     required this.avatarUrl,
+    required this.userId,
   });
 
   @override
@@ -136,9 +138,8 @@ class _AdminDrawer extends StatelessWidget {
               accountEmail: Text(role),
               decoration: const BoxDecoration(color: Colors.indigo),
               onDetailsPressed: () =>
-                  Navigator.pushNamed(context, '/admin/profile'),
+                  Navigator.pushNamed(context, '/staff/profile'),
             ),
-
             ListTile(
               leading: const Icon(Icons.dashboard),
               title: const Text('Dashboard'),
@@ -149,18 +150,10 @@ class _AdminDrawer extends StatelessWidget {
               title: const Text('My Profile'),
               onTap: () {
                 Navigator.pop(context);
-                onNavigate('/admin/profile');
+                onNavigate('/staff/profile');
               },
             ),
             const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.group),
-              title: const Text('Users'),
-              onTap: () {
-                Navigator.pop(context);
-                onNavigate('/admin/users');
-              },
-            ),
             ListTile(
               leading: const Icon(Icons.table_restaurant),
               title: const Text('Tables'),
@@ -199,21 +192,19 @@ class _AdminDrawer extends StatelessWidget {
   }
 }
 
-class _AdminCard extends StatelessWidget {
+class _StaffCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
 
-  const _AdminCard({
+  const _StaffCard({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.color,
     this.onTap,
-    this.onLongPress,
   });
 
   @override
@@ -223,7 +214,6 @@ class _AdminCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),

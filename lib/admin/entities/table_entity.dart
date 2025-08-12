@@ -1,65 +1,65 @@
-enum TableStatus { available, occupied, reserved, cleaning }
-
-extension TableStatusApi on TableStatus {
-  String toApi() {
-    switch (this) {
-      case TableStatus.available:
-        return 'AVAILABLE';
-      case TableStatus.occupied:
-        return 'OCCUPIED';
-      case TableStatus.reserved:
-        return 'RESERVED';
-      case TableStatus.cleaning:
-        return 'CLEANING';
-    }
-  }
-
-  static TableStatus parse(String raw) {
-    switch (raw.toUpperCase()) {
-      case 'AVAILABLE':
-        return TableStatus.available;
-      case 'OCCUPIED':
-        return TableStatus.occupied;
-      case 'RESERVED':
-        return TableStatus.reserved;
-      case 'CLEANING':
-        return TableStatus.cleaning;
-      default:
-        return TableStatus.available;
-    }
-  }
-
-  String get label => toApi();
-}
-
 class TableEntity {
   final String id;
-  final int number;
-  final int capacity;
+  final int? number; // ✅ số bàn: trùng với web
+  final int? capacity;
+  final String?
+  status; // AVAILABLE / OCCUPIED / RESERVED / CLEANING / INACTIVE...
   final String? location;
-  final TableStatus status;
+  final String? description;
+
+  // tuỳ backend có trả sẵn không; còn QR chi tiết lấy API riêng
+  final String? qrCode;
 
   const TableEntity({
     required this.id,
-    required this.number,
-    required this.capacity,
+    this.number,
+    this.capacity,
+    this.status,
     this.location,
-    required this.status,
+    this.description,
+    this.qrCode,
   });
+
+  factory TableEntity.fromJson(Map<String, dynamic> json) {
+    return TableEntity(
+      id: (json['id'] ?? json['_id']).toString(),
+      number:
+          json['number'] ?? json['tableNumber'], // 👈 map fallback nếu BE cũ
+      capacity: json['capacity'],
+      status: json['status'],
+      location: json['location'],
+      description: json['description'],
+      qrCode: json['qrCode'], // nếu BE có nhét cùng detail luôn
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'number': number,
+    'capacity': capacity,
+    'status': status,
+    'location': location,
+    'description': description,
+    'qrCode': qrCode,
+  };
 
   TableEntity copyWith({
     String? id,
     int? number,
     int? capacity,
+    String? status,
     String? location,
-    TableStatus? status,
+    String? description,
+    String? qrCode,
   }) {
     return TableEntity(
       id: id ?? this.id,
       number: number ?? this.number,
       capacity: capacity ?? this.capacity,
-      location: location ?? this.location,
       status: status ?? this.status,
+      location: location ?? this.location,
+      description: description ?? this.description,
+      qrCode: qrCode ?? this.qrCode,
     );
   }
 }

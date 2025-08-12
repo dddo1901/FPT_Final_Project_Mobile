@@ -1,26 +1,21 @@
+// lib/admin/pages/user_detail_page.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
-import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
 import 'package:fpt_final_project_mobile/admin/services/user_service.dart';
 import 'package:fpt_final_project_mobile/admin/widgets/user_card.dart';
 
 class UserDetailPage extends StatefulWidget {
   final String userId;
-  final UserService userService;
-
-  const UserDetailPage({
-    super.key,
-    required this.userId,
-    required this.userService,
-  });
+  const UserDetailPage({super.key, required this.userId});
 
   @override
-  _UserDetailPageState createState() => _UserDetailPageState();
+  State<UserDetailPage> createState() => _UserDetailPageState();
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
   late Future<UserModel> _userFuture;
-  late UserService _userService;
 
   @override
   void initState() {
@@ -29,35 +24,64 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }
 
   Future<UserModel> _fetchUserDetails() async {
-    return await widget.userService.getUserById(widget.userId);
+    final svc = context.read<UserService>();
+    return svc.getUserById(widget.userId);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('User Details'),
+  Future<void> _reload() async {
+    setState(() {
+      _userFuture = _fetchUserDetails();
+    });
+  }
+
+  void _navigateToUserForm(BuildContext context) async {
+    // Đi theo route edit, truyền userId qua arguments
+    final result = await Navigator.pushNamed(
+      context,
+      '/admin/users/edit',
+      arguments: widget.userId,
+    );
+
+    // Nếu form báo thành công -> reload
+    if (result == true && mounted) {
+      _reload();
+    }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, UserModel user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text(
+          'Are you sure you want to delete ${user.name.isNotEmpty ? user.name : user.username}?',
+        ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.edit),
-            onPressed: () => _navigateToUserForm(context),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context); // close dialog
+              try {
+                await context.read<UserService>().deleteUser(user.id);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('User deleted successfully')),
+                );
+                Navigator.pop(context); // back to list
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to delete user: $e')),
+                );
+              }
+            },
+            child: const Text('Delete'),
           ),
         ],
-      ),
-      body: FutureBuilder<UserModel>(
-        future: _userFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData) {
-            return Center(child: Text('User not found'));
-          }
-
-          final user = snapshot.data!;
-          return _buildUserDetails(user);
-        },
       ),
     );
   }
@@ -72,8 +96,9 @@ class _UserDetailPageState extends State<UserDetailPage> {
         children: [
           // ======= Header card =======
           UserCard(
-            user: userForCard,
+            user: userForCard, // UserEntity/UserModel tuỳ bạn đã khai báo
             onTap: () {
+              // cho trải nghiệm giống yêu cầu
               Navigator.pop(context);
               _navigateToUserForm(context);
             },
@@ -86,14 +111,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
           // ======= Account section =======
           const _SectionTitle('Account'),
           _InfoTile('Username', user.username),
-          _InfoTile('Email', user.email ?? '—'),
-          _InfoTile('Role', user.role ?? '—'),
+          _InfoTile('Email', user.email),
+          _InfoTile('Role', user.role),
 
           const Divider(height: 32),
 
           const _SectionTitle('Personal'),
-          _InfoTile('Full name', user.name ?? '—'),
-          _InfoTile('Phone', user.phone ?? '—'),
+          _InfoTile('Full name', user.name),
+          _InfoTile('Phone', user.phone),
 
           const Divider(height: 32),
 
@@ -131,56 +156,33 @@ class _UserDetailPageState extends State<UserDetailPage> {
     );
   }
 
-  void _navigateToUserForm(BuildContext context) async {
-    final user = await _userFuture;
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserFormPage(
-          userService: widget.userService, // Thêm dòng này
-          initialUser: user,
-        ),
-      ),
-    );
-
-    if (result == true) {
-      setState(() {
-        _userFuture = _fetchUserDetails();
-      });
-    }
-  }
-
-  void _showDeleteConfirmation(BuildContext context, UserModel user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirm Delete'),
-        content: Text(
-          'Are you sure you want to delete ${user.name ?? user.username}?',
-        ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('User Details'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await _userService.deleteUser(user.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('User deleted successfully')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to delete user: $e')),
-                );
-              }
-            },
-            child: Text('Delete'),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _navigateToUserForm(context),
           ),
         ],
+      ),
+      body: FutureBuilder<UserModel>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final user = snapshot.data;
+          if (user == null) {
+            return const Center(child: Text('User not found'));
+          }
+          return _buildUserDetails(user);
+        },
       ),
     );
   }
@@ -209,11 +211,12 @@ class _InfoTile extends StatelessWidget {
   const _InfoTile(this.label, this.value);
   @override
   Widget build(BuildContext context) {
+    final display = (value == null || value!.trim().isEmpty) ? '—' : value!;
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(value?.isNotEmpty == true ? value! : '—'),
+      subtitle: Text(display),
     );
   }
 }

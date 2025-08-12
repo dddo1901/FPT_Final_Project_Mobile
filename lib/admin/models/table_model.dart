@@ -1,55 +1,60 @@
-import 'package:fpt_final_project_mobile/admin/entities/table_entity.dart';
+import '../entities/table_entity.dart';
 
 class TableModel {
   final String id;
-  final int number;
-  final int capacity;
+  final int? number; // ✅ số bàn (web)
+  final int? capacity;
+  final String status; // luôn upper-case
   final String? location;
-  final String status; // API dùng string
+  final String? description;
+
+  /// Dùng để render ảnh QR (http/https | data-url | base64 trần | null)
+  final String? qrUrl;
+
+  /// Text đã format sẵn cho UI list
+  String get title => 'Table #${number ?? id}';
+  String get capacityText => 'Capacity: ${capacity ?? "—"}';
 
   const TableModel({
     required this.id,
     required this.number,
     required this.capacity,
-    this.location,
     required this.status,
+    this.location,
+    this.description,
+    this.qrUrl,
   });
 
-  factory TableModel.fromJson(Map<String, dynamic> j) {
+  /// Map từ Entity (backend) sang View Model (UI)
+  factory TableModel.fromEntity(TableEntity e, {String? qrFromApi}) {
     return TableModel(
-      id: (j['id'] ?? '').toString(),
-      number: j['number'] is String
-          ? int.tryParse(j['number']) ?? 0
-          : (j['number'] ?? 0) as int,
-      capacity: j['capacity'] is String
-          ? int.tryParse(j['capacity']) ?? 0
-          : (j['capacity'] ?? 0) as int,
-      location: j['location']?.toString(),
-      status: (j['status'] ?? 'AVAILABLE').toString(),
+      id: e.id,
+      number: e.number, // fallback nhẹ nếu BE cũ
+      capacity: e.capacity,
+      status: (e.status ?? 'UNKNOWN').toUpperCase(),
+      location: e.location,
+      description: e.description,
+      qrUrl: qrFromApi ?? e.qrCode,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'number': number,
-    'capacity': capacity,
-    'location': location,
-    'status': status,
-  };
-
-  TableEntity toEntity() => TableEntity(
-    id: id,
-    number: number,
-    capacity: capacity,
-    location: location,
-    status: TableStatusApi.parse(status),
-  );
-
-  static TableModel fromEntity(TableEntity e) => TableModel(
-    id: e.id,
-    number: e.number,
-    capacity: e.capacity,
-    location: e.location,
-    status: e.status.toApi(),
-  );
+  TableModel copyWith({
+    String? id,
+    int? number,
+    int? capacity,
+    String? status,
+    String? location,
+    String? description,
+    String? qrUrl,
+  }) {
+    return TableModel(
+      id: id ?? this.id,
+      number: number ?? this.number,
+      capacity: capacity ?? this.capacity,
+      status: (status ?? this.status).toUpperCase(),
+      location: location ?? this.location,
+      description: description ?? this.description,
+      qrUrl: qrUrl ?? this.qrUrl,
+    );
+  }
 }

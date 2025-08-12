@@ -1,139 +1,121 @@
-// lib/data/services/table_service.dart
 import 'dart:convert';
-import 'package:fpt_final_project_mobile/admin/entities/table_entity.dart';
 import 'package:http/http.dart' as http;
-
-import '../models/table_model.dart';
-
-typedef TokenProvider = Future<String?> Function();
+import '../entities/table_entity.dart';
 
 class TableService {
   final String baseUrl;
-  final http.Client _client;
-  final TokenProvider getToken;
+  final http.Client client;
+  TableService({required this.baseUrl, required this.client});
 
-  TableService({
-    required this.baseUrl,
-    required this.getToken,
-    http.Client? client,
-  }) : _client = client ?? http.Client();
+  bool _ok(int s) => s >= 200 && s < 300;
+  String _decode(http.Response r) =>
+      r.bodyBytes.isNotEmpty ? utf8.decode(r.bodyBytes) : '';
 
-  Map<String, String> _headers(String? token) => {
-    if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-
-  String _decodeBody(http.Response res) =>
-      res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
-
-  bool _isOk(int code) => code >= 200 && code < 300;
-
+  // List tables
   Future<List<TableEntity>> getTables() async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables');
-    final res = await _client.get(uri, headers: _headers(token));
-    final body = _decodeBody(res);
-
-    if (_isOk(res.statusCode)) {
-      final list = (jsonDecode(body) as List)
-          .map((e) => TableModel.fromJson(e as Map<String, dynamic>).toEntity())
-          .toList();
-      return list;
+    final res = await client.get(Uri.parse('$baseUrl/api/tables'));
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      final data = jsonDecode(body);
+      if (data is List) {
+        return data.map((e) => TableEntity.fromJson(e)).toList();
+      }
+      if (data is Map<String, dynamic> && data['content'] is List) {
+        return (data['content'] as List)
+            .map((e) => TableEntity.fromJson(e))
+            .toList();
+      }
+      throw Exception('Unexpected list response shape');
     }
     throw Exception('GET /api/tables -> ${res.statusCode}: $body');
   }
 
-  Future<TableEntity> getTable(String id) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables/$id');
-    final res = await _client.get(uri, headers: _headers(token));
-    final body = _decodeBody(res);
-
-    if (_isOk(res.statusCode)) {
-      return TableModel.fromJson(jsonDecode(body)).toEntity();
+  // Detail
+  Future<TableEntity> getTableById(String id) async {
+    final res = await client.get(Uri.parse('$baseUrl/api/tables/$id'));
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return TableEntity.fromJson(jsonDecode(body));
     }
     throw Exception('GET /api/tables/$id -> ${res.statusCode}: $body');
   }
 
-  Future<TableEntity> createTable(TableEntity e) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables');
-    final model = TableModel.fromEntity(e);
-    final res = await _client.post(
-      uri,
-      headers: _headers(token),
-      body: jsonEncode(model.toJson()),
+  // Create
+  Future<void> createTable(TableEntity e) async {
+    final res = await client.post(
+      Uri.parse('$baseUrl/api/tables'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'number': e.number, // ✅ key theo web
+        'capacity': e.capacity,
+        'status': e.status,
+        'location': e.location,
+        'description': e.description,
+      }),
     );
-    final body = _decodeBody(res);
-
-    if (_isOk(res.statusCode)) {
-      // Server có thể trả object hoặc 201/204
-      if (res.headers['content-type']?.contains('application/json') == true &&
-          body.isNotEmpty) {
-        return TableModel.fromJson(jsonDecode(body)).toEntity();
-      }
-      // fallback: fetch lại list hoặc throw để caller tự handle
-      final all = await getTables();
-      return all.last; // tạm đoán bản mới nhất
+    if (!_ok(res.statusCode)) {
+      throw Exception('POST /api/tables -> ${res.statusCode}: ${res.body}');
     }
-    throw Exception('POST /api/tables -> ${res.statusCode}: $body');
   }
 
-  Future<TableEntity> updateTable(String id, TableEntity e) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables/$id');
-    final model = TableModel.fromEntity(e);
-    final res = await _client.put(
-      uri,
-      headers: _headers(token),
-      body: jsonEncode(model.toJson()),
+  // Update
+  Future<void> updateTable(String id, TableEntity e) async {
+    final res = await client.put(
+      Uri.parse('$baseUrl/api/tables/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'number': e.number, // ✅ key theo web
+        'capacity': e.capacity,
+        'status': e.status,
+        'location': e.location,
+        'description': e.description,
+      }),
     );
-    final body = _decodeBody(res);
-
-    if (_isOk(res.statusCode)) {
-      if (res.headers['content-type']?.contains('application/json') == true &&
-          body.isNotEmpty) {
-        return TableModel.fromJson(jsonDecode(body)).toEntity();
-      }
-      return getTable(id); // fallback
-    }
-    throw Exception('PUT /api/tables/$id -> ${res.statusCode}: $body');
-  }
-
-  Future<void> deleteTable(String id) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables/$id');
-    final res = await _client.delete(uri, headers: _headers(token));
-    final body = _decodeBody(res);
-    if (!_isOk(res.statusCode)) {
-      throw Exception('DELETE /api/tables/$id -> ${res.statusCode}: $body');
+    if (!_ok(res.statusCode)) {
+      throw Exception('PUT /api/tables/$id -> ${res.statusCode}: ${res.body}');
     }
   }
 
-  Future<void> updateStatus(String id, TableStatus status) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables/$id/status');
-    final res = await _client.put(
-      uri,
-      headers: _headers(token),
-      body: jsonEncode({'status': status.toApi()}),
+  // Update status (web có)
+  Future<void> updateStatus(String id, String newStatus) async {
+    final res = await client.put(
+      Uri.parse('$baseUrl/api/tables/$id/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'status': newStatus}),
     );
-    final body = _decodeBody(res);
-    if (!_isOk(res.statusCode)) {
-      throw Exception('PUT /status -> ${res.statusCode}: $body');
+    if (!_ok(res.statusCode)) {
+      throw Exception(
+        'PUT /api/tables/$id/status -> ${res.statusCode}: ${res.body}',
+      );
     }
   }
+}
 
-  Future<String> fetchQrCodeUrl(String id) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl/api/tables/$id/qr-code');
-    final res = await _client.get(uri, headers: _headers(token));
-    final body = _decodeBody(res);
-    if (_isOk(res.statusCode)) {
-      final j = jsonDecode(body) as Map<String, dynamic>;
-      return (j['qrCode'] ?? '').toString();
+// ───── QR Code API
+extension TableQrApi on TableService {
+  Future<String?> getTableQr(String id) async {
+    final res = await client.get(Uri.parse('$baseUrl/api/tables/$id/qr-code'));
+    if (!_ok(res.statusCode)) {
+      throw Exception(
+        'GET /api/tables/$id/qr-code -> ${res.statusCode}: ${res.body}',
+      );
     }
-    throw Exception('GET /qr-code -> ${res.statusCode}: $body');
+    final map = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    final raw = (map['qrCode'] ?? '').toString().trim();
+    if (raw.isEmpty) return null;
+
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    if (raw.startsWith('data:image')) return raw;
+
+    // base64 "trần"
+    final looksBase64 = !raw.contains('/') && raw.length > 100;
+    if (looksBase64) return 'data:image/png;base64,$raw';
+
+    // relative path
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    final normalizedPath = raw.startsWith('/') ? raw : '/$raw';
+    return '$normalizedBase$normalizedPath';
   }
 }

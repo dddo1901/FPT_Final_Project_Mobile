@@ -1,105 +1,69 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:jwt_decode/jwt_decode.dart';
-
-class ApiResult {
-  final bool success;
-  final bool requireOtp;
-  final String role;
-  final String message;
-  ApiResult({
-    required this.success,
-    this.requireOtp = false,
-    this.role = '',
-    this.message = '',
-  });
-}
 
 class ApiService {
-  static const base = 'http://10.0.2.2:8080/api/auth';
-  static final storage = FlutterSecureStorage();
+  final String baseUrl;
+  final http.Client client;
 
-  static Future<ApiResult> login(String user, String pass) async {
-    final res = await http.post(
-      Uri.parse('$base/login'),
+  ApiService({required this.baseUrl, required this.client});
+
+  bool _ok(int s) => s >= 200 && s < 300;
+  String _decode(http.Response r) =>
+      r.bodyBytes.isNotEmpty ? utf8.decode(r.bodyBytes) : '';
+
+  // -------- AUTH --------
+  Future<Map<String, dynamic>> login(String username, String password) async {
+    final url = Uri.parse(
+      '$baseUrl/api/auth/login',
+    ); // hoặc /signin tuỳ backend
+    final res = await client.post(
+      url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': user, 'password': pass}),
+      body: jsonEncode({'username': username, 'password': password}),
     );
-    print(res.statusCode);
-    if (res.statusCode == 200) {
-      final d = jsonDecode(res.body);
-      final token = d['token'];
-      await storage.write(key: 'token', value: token);
-      await storage.write(key: 'username', value: user);
-      return ApiResult(success: true);
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
     }
-    return ApiResult(success: false, message: 'Login failed');
+    throw Exception('Login failed: ${res.statusCode} $body');
   }
 
-  static Future<void> resendOtp(String user) async {
-    await http.post(
-      Uri.parse('$base/resend-otp'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': user}),
+  Future<Map<String, dynamic>> verifyOtp(String email, String code) async {
+    final url = Uri.parse('$baseUrl/api/auth/verify-2fa');
+    final res = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      }, // TokenClient sẽ tự add Authorization
+      body: jsonEncode({'email': email, 'code': code}),
     );
-  }
-
-  static Future<ApiResult> verifyOtp(String otp) async {
-    final token = await storage.read(key: 'token');
-    if (token != null) {
-      Map<String, dynamic> payload = Jwt.parseJwt(token);
-      final email = payload['email'] ?? payload['sub'];
-
-      final res = await http.post(
-        Uri.parse('$base/verify-2fa'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'email': email, 'code': otp}),
-      );
-      if (res.statusCode == 200) {
-        final List roles = payload['authorities'] ?? [];
-
-        String? role;
-        if (roles.isNotEmpty && roles.first is String) {
-          role = (roles.first as String).replaceAll('ROLE_', '');
-        }
-
-        print('ROLE: $role');
-        return ApiResult(success: true, role: role!);
-      }
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
     }
-    return ApiResult(success: false, message: 'Invalid OTP.');
+    throw Exception('Verify OTP failed: ${res.statusCode} $body');
   }
 
-  static Future<Map<String, String>> getAuthHeaders() async {
-    final token = await storage.read(key: 'token');
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer \$token',
-    };
-  }
-
-  // static Future<http.Response> get(String endpoint) async {
-  //   final headers = await getAuthHeaders();
-  //   return await http.get(Uri.parse('\$baseUrl/\$endpoint'), headers: headers);
-  // }
-
-  // static Future<http.Response> post(
-  //   String endpoint,
-  //   Map<String, dynamic> body,
-  // ) async {
-  //   final headers = await getAuthHeaders();
-  //   return await http.post(
-  //     Uri.parse('\$baseUrl/\$endpoint'),
-  //     headers: headers,
-  //     body: jsonEncode(body),
-  //   );
-  // }
-
-  static Future<void> logout() async {
-    await storage.deleteAll();
+  Future<Map<String, dynamic>> resendOtp(String email) async {
+    // Bạn đang dùng /api/auth/send-mail -> giữ nguyên để khớp backend
+    final url = Uri.parse('$baseUrl/api/auth/send-mail');
+    final res = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      }, // TokenClient sẽ tự add Authorization nếu không skip
+      body: jsonEncode({'email': email}),
+    );
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
+    }
+    throw Exception('Resend OTP failed: ${res.statusCode} $body');
   }
 }

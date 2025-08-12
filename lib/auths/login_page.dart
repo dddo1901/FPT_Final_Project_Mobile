@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/auths/api_service.dart';
-import '../widgets/loading_overlay.dart';
+import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
+import 'package:fpt_final_project_mobile/auths/jwt_claims.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,90 +11,79 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _user = TextEditingController();
-  final _pass = TextEditingController();
-  bool loading = false;
-  String error = '';
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
-    setState(() {
-      loading = true;
-      error = '';
-    });
-    print('>>>>>');
+    setState(() => _loading = true);
+    try {
+      final api = context.read<ApiService>();
+      final auth = context.read<AuthProvider>();
 
-    final result = await ApiService.login(_user.text, _pass.text);
-    setState(() {
-      loading = false;
-    });
+      final resp = await api.login(_userCtrl.text.trim(), _passCtrl.text);
+      final token = (resp['token'] ?? resp['accessToken'] ?? resp['jwt'] ?? '')
+          .toString();
+      if (token.isEmpty) throw Exception('Token is empty.');
+      final claims = parseJwtClaims(token);
+      final role = pickPrimaryRole(claims.roles);
+      final email = claims.email ?? _userCtrl.text.trim();
 
-    if (result.success) {
-      Navigator.pushReplacementNamed(
+      await auth.login(token: token, role: role);
+
+      if (!mounted) return;
+      Navigator.of(
         context,
-        '/verify',
-        arguments: {'username': _user.text},
-      );
-    } else {
-      setState(() {
-        error = result.message;
-      });
+      ).pushNamed('/verify', arguments: {'email': email, 'role': role});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const Text(
-                    'Pizza',
-                    style: TextStyle(fontSize: 32, color: Colors.white),
-                  ),
-                  const SizedBox(height: 40),
-                  TextField(
-                    controller: _user,
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      filled: true,
-                      fillColor: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _pass,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      filled: true,
-                      fillColor: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: loading ? null : _login,
-                    child: const Text('Login'),
-                  ),
-                  if (error.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        error,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-                ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Admin Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _userCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Username / Email',
+                border: OutlineInputBorder(),
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _loading ? null : _login,
+              child: Text(_loading ? 'Processing...' : 'Login'),
+            ),
+          ],
         ),
-        if (loading) const LoadingOverlay(),
-      ],
+      ),
     );
   }
 }
