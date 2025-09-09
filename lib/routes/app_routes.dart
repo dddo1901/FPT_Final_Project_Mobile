@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
 
 import 'package:fpt_final_project_mobile/admin/pages/admin_home.dart';
-import 'package:fpt_final_project_mobile/admin/pages/food_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_form_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_list_page.dart';
-import 'package:fpt_final_project_mobile/admin/pages/table_detail_page.dart';
 
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
@@ -25,6 +23,59 @@ import 'package:fpt_final_project_mobile/auths/role_guard.dart';
 import 'package:fpt_final_project_mobile/auths/verify_otp_page.dart';
 import 'package:fpt_final_project_mobile/staff/pages/staff_home.dart';
 import 'package:provider/provider.dart';
+
+// Claims helper class
+class _Claims {
+  final int? userId;
+  final String? role;
+  final String? name;
+  final String? avatarUrl;
+
+  const _Claims({this.userId, this.role, this.name, this.avatarUrl});
+}
+
+// JWT claims extractor
+_Claims _claimsFromJwt(String? token) {
+  if (token == null || token.isEmpty) return const _Claims();
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return const _Claims();
+
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+
+    // Helper to pick first non-null value
+    String? pick(List<String> keys) {
+      for (final k in keys) {
+        final v = payload[k];
+        if (v != null && v.toString().isNotEmpty) return v.toString();
+      }
+      return null;
+    }
+
+    // Extract user ID as integer
+    final userIdStr = pick(['sub', 'userId', 'id']);
+    final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
+
+    // Extract role
+    String? role = pick(['role', 'ROLE']);
+    if (role == null && payload['roles'] is List) {
+      final roles = payload['roles'] as List;
+      if (roles.isNotEmpty) role = roles.first.toString();
+    }
+
+    return _Claims(
+      userId: userId,
+      role: role,
+      name: pick(['name', 'fullName', 'username']),
+      avatarUrl: pick(['avatar', 'avatarUrl', 'image']),
+    );
+  } catch (e) {
+    debugPrint('JWT parse error: $e');
+    return const _Claims();
+  }
+}
 
 // ==================== STATIC ROUTES (no arguments) ====================
 final Map<String, WidgetBuilder> appRoutes = {
@@ -45,12 +96,15 @@ final Map<String, WidgetBuilder> appRoutes = {
         final auth = ctx.watch<AuthProvider>();
         final claims = _claimsFromJwt(auth.token);
         final userId = claims.userId;
-        if (userId == null || userId.isEmpty) {
+        
+        if (userId == null) {
+          debugPrint('Missing userId in claims for /admin/profile');
           return const NotFoundPage(
             routeName: '/admin/profile (missing userId)',
           );
         }
-        return UserDetailPage(userId: userId);
+        
+        return UserDetailPage(userId: userId.toString());
       },
     ),
   ),
@@ -61,10 +115,7 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/admin/users/create': (_) => RoleGuard(
     allowed: const ['ADMIN'],
     child: Builder(
-      builder: (ctx) => UserFormPage(
-        userService: ctx.read<UserService>(), // ✅ inject từ Provider
-        initialUser: null, // tạo mới
-      ),
+      builder: (ctx) => UserFormPage(userService: ctx.read<UserService>()),
     ),
   ),
 
@@ -94,10 +145,10 @@ final Map<String, WidgetBuilder> appRoutes = {
         final auth = ctx.watch<AuthProvider>();
         final claims = _claimsFromJwt(auth.token);
         final userId = claims.userId;
-        if (userId == null || userId.isEmpty) {
+        if (userId == null) {
           return const NotFoundPage(routeName: '/staff (missing userId)');
         }
-        return StaffHome(userId: userId);
+        return StaffHome(userId: userId.toString());
       },
     ),
   ),
@@ -110,242 +161,99 @@ final Map<String, WidgetBuilder> appRoutes = {
         final auth = ctx.watch<AuthProvider>();
         final claims = _claimsFromJwt(auth.token);
         final userId = claims.userId;
-        if (userId == null || userId.isEmpty) {
+        if (userId == null) {
           return const NotFoundPage(
             routeName: '/staff/profile (missing userId)',
           );
         }
-        return UserDetailPage(userId: userId);
+        return UserDetailPage(userId: userId.toString());
       },
     ),
   ),
 };
 
 // ==================== DYNAMIC ROUTES (need arguments) ====================
-Route<dynamic>? onGenerateRoute(RouteSettings s) {
-  switch (s.name) {
-    // ----- Users -----
-    case '/admin/users/detail':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) => const NotFoundPage(
-              routeName: '/admin/users/detail (missing id)',
-            ),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: UserDetailPage(userId: id),
-          ),
-          settings: s,
-        );
-      }
+Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+  final uri = Uri.parse(settings.name ?? '');
+  final segments = uri.pathSegments;
 
-    case '/admin/users/edit':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) =>
-                const NotFoundPage(routeName: '/admin/users/edit (missing id)'),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (ctx) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: Builder(
-              builder: (ctx2) {
-                final svc = ctx2.read<UserService>(); // ✅ lấy service
-                return FutureBuilder<UserModel>(
-                  future: svc.getUserById(id), // tải user để edit
-                  builder: (context, snap) {
-                    if (snap.connectionState != ConnectionState.done) {
-                      return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snap.hasError || !snap.hasData) {
-                      return Scaffold(
-                        body: Center(
-                          child: Text(
-                            'Load user failed: ${snap.error ?? "No data"}',
-                          ),
-                        ),
-                      );
-                    }
-                    return UserFormPage(
-                      userService: svc, // ✅ truyền service
-                      initialUser: snap.data!, // ✅ truyền user cho form
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          settings: s,
-        );
-      }
+  // Handle user detail routes
+  if (segments.length == 3 && segments[0] == 'admin' && segments[1] == 'users') {
+    final userId = segments[2];
+    debugPrint('Handling user detail route for ID: $userId');
 
-    // ----- Tables -----
-    case '/admin/tables/edit':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) => const NotFoundPage(
-              routeName: '/admin/tables/edit (missing id)',
-            ),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: TableFormPage(tableId: id),
-          ),
-          settings: s,
-        );
-      }
+    // Validate userId format
+    if (int.tryParse(userId) == null) {
+      debugPrint('Invalid user ID format: $userId');
+      return MaterialPageRoute(
+        builder: (_) => const NotFoundPage(
+          routeName: 'Invalid user ID format',
+        ),
+      );
+    }
 
-    case '/admin/tables/detail':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) => const NotFoundPage(
-              routeName: '/admin/tables/detail (missing id)',
-            ),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: TableDetailPage(tableId: id),
-          ),
-          settings: s,
-        );
-      }
-
-    // ----- Foods -----
-    case '/admin/foods/edit':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) =>
-                const NotFoundPage(routeName: '/admin/foods/edit (missing id)'),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: FoodFormPage(foodId: id),
-          ),
-          settings: s,
-        );
-      }
-
-    case '/admin/foods/detail':
-      {
-        final id = s.arguments as String?;
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) => const NotFoundPage(
-              routeName: '/admin/foods/detail (missing id)',
-            ),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: FoodDetailPage(foodId: id),
-          ),
-          settings: s,
-        );
-      }
-
-    // ----- Order -----
-    case '/admin/orders/detail':
-      {
-        final id = s.arguments as String?;
-        debugPrint('➡️ onGenerateRoute /admin/orders/detail id=$id'); // debug
-        if (id == null || id.isEmpty) {
-          return MaterialPageRoute(
-            builder: (_) => const NotFoundPage(
-              routeName: '/admin/orders/detail (missing id)',
-            ),
-            settings: s,
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => RoleGuard(
-            allowed: const ['ADMIN'],
-            child: OrderDetailPage(orderId: id), // ✅ không phải SizedBox
-          ),
-          settings: s,
-        );
-      }
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => RoleGuard(
+        allowed: const ['ADMIN'],
+        child: UserDetailPage(userId: userId),
+      ),
+    );
   }
-  return null; // rơi xuống onUnknownRoute
+
+  // Handle other dynamic routes based on pattern
+  final id = settings.arguments as String?;
+  if (id == null || id.isEmpty) {
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => NotFoundPage(routeName: '${settings.name} (missing id)'),
+    );
+  }
+
+  // Map routes to pages
+  switch (settings.name) {
+    case '/admin/users/edit':
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (ctx) => RoleGuard(
+          allowed: const ['ADMIN'],
+          child: Builder(
+            builder: (ctx) {
+              final service = ctx.read<UserService>();
+              return FutureBuilder<UserModel>(
+                future: service.getUserById(id),
+                builder: (_, snap) {
+                  if (!snap.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return UserFormPage(
+                    userService: service,
+                    initialUser: snap.data!,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      );
+
+    case '/admin/orders/detail':
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => RoleGuard(
+          allowed: const ['ADMIN'],
+          child: OrderDetailPage(orderId: id),
+        ),
+      );
+
+    // Add other dynamic routes as needed...
+  }
+
+  return null;
 }
 
 // ==================== UNKNOWN ROUTE (safety net) ====================
-Route<dynamic> onUnknownRoute(RouteSettings s) => MaterialPageRoute(
-  builder: (_) => NotFoundPage(routeName: s.name),
-  settings: s,
+Route<dynamic> onUnknownRoute(RouteSettings settings) => MaterialPageRoute(
+  settings: settings,
+  builder: (_) => NotFoundPage(routeName: settings.name),
 );
-
-class _Claims {
-  final String? userId;
-  final String? role;
-  final String? name;
-  final String? avatarUrl;
-  const _Claims({this.userId, this.role, this.name, this.avatarUrl});
-}
-
-_Claims _claimsFromJwt(String? token) {
-  if (token == null || token.isEmpty) return const _Claims();
-  try {
-    final parts = token.split('.');
-    if (parts.length != 3) return const _Claims();
-    final payload = jsonDecode(
-      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-    );
-
-    String? _pick(List<String> keys) {
-      for (final k in keys) {
-        final v = payload[k];
-        if (v != null && v.toString().isNotEmpty) return v.toString();
-      }
-      return null;
-    }
-
-    // role có thể là 'role', 'roles' (array), 'authorities', 'scope'...
-    String? role = _pick(['role', 'ROLE', 'authority']);
-    role ??= (payload['roles'] is List && (payload['roles'] as List).isNotEmpty)
-        ? (payload['roles'] as List).first.toString()
-        : null;
-    role ??=
-        (payload['authorities'] is List &&
-            (payload['authorities'] as List).isNotEmpty)
-        ? (payload['authorities'] as List).first.toString()
-        : null;
-
-    return _Claims(
-      userId: _pick(['sub', 'userId', 'id']),
-      role: role,
-      name: _pick(['name', 'fullName', 'username', 'email', 'sub']),
-      avatarUrl: _pick(['avatar', 'avatarUrl', 'image', 'imageUrl', 'picture']),
-    );
-  } catch (_) {
-    return const _Claims();
-  }
-}

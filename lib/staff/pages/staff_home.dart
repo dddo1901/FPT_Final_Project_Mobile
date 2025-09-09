@@ -297,8 +297,9 @@ _Claims _claimsFromJwt(String? token) {
 String _initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
   if (parts.isEmpty) return '?';
-  if (parts.length == 1)
+  if (parts.length == 1) {
     return parts.first.characters.take(2).toString().toUpperCase();
+  }
   return (parts.first.characters.first + parts.last.characters.first)
       .toUpperCase();
 }

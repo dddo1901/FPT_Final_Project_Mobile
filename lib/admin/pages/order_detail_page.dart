@@ -26,12 +26,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     });
   }
 
-  String _fmtMoney(double v) => '${v.toStringAsFixed(0)} đ';
-  String _fmtDate(DateTime? d) {
-    if (d == null) return '—';
-    final t = d.toLocal().toString();
-    return t.substring(0, 16);
-  }
+  String _fmtMoney(double v) => '${v.toStringAsFixed(0)}đ';
+  String _fmtDate(DateTime d) =>
+      '${d.day}/${d.month}/${d.year} ${d.hour}:${d.minute}';
 
   @override
   Widget build(BuildContext context) {
@@ -51,87 +48,59 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           if (snap.hasError) {
             return Center(child: Text('Error: ${snap.error}'));
           }
-          final o = snap.data!;
+          final order = snap.data!;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                'Order #${o.number}',
+                'Order #${order.orderNumber}',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 6),
-              Text('Created: ${_fmtDate(o.createdAt)}'),
+              Text('Created: ${_fmtDate(order.createdAt)}'),
               const SizedBox(height: 6),
-              Text('Status: ${o.status ?? '—'}'),
-              Text('Delivery: ${o.deliveryStatus ?? '—'}'),
+              Text('Status: ${order.status}'),
+              Text('Delivery Status: ${order.deliveryStatus ?? '—'}'),
               const SizedBox(height: 6),
               Text(
-                'Total: ${_fmtMoney(o.total)}',
+                'Total: ${_fmtMoney(order.totalPrice)}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const Divider(height: 32),
 
+              // Customer Section
               Text('Customer', style: Theme.of(context).textTheme.titleMedium),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading:
-                    (o.customerAvatar != null && o.customerAvatar!.isNotEmpty)
-                    ? CircleAvatar(
-                        backgroundImage: NetworkImage(o.customerAvatar!),
-                      )
-                    : const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(o.customerName ?? '—'),
-                subtitle: Text(
-                  '${o.customerEmail ?? '-'} • ${o.customerPhone ?? '-'}',
-                ),
-                trailing: (o.customerPoint != null)
-                    ? Text('${o.customerPoint} pts')
-                    : null,
+                leading: const CircleAvatar(child: Icon(Icons.person)),
+                title: Text(order.customer?.fullName ?? 'Guest'),
+                subtitle: Text(order.customer?.email ?? '—'),
               ),
               const Divider(height: 32),
 
+              // Delivery Section
               Text('Delivery', style: Theme.of(context).textTheme.titleMedium),
-              _kv('Recipient', o.recipientName),
-              _kv('Phone', o.recipientPhone),
-              _kv('Address', o.deliveryAddress),
-              _kv('Note', o.deliveryNote),
+              _kv('Recipient', order.recipientName),
+              _kv('Phone', order.recipientPhone),
+              _kv('Address', order.deliveryAddress),
               const Divider(height: 32),
 
+              // Payment Section
               Text('Payment', style: Theme.of(context).textTheme.titleMedium),
-              _kv('Method', o.paymentMethodName),
-              _kv('Voucher', o.voucherCode),
-              _kv(
-                'Voucher Discount',
-                o.voucherDiscount != null
-                    ? _fmtMoney(o.voucherDiscount!)
-                    : null,
-              ),
+              _kv('Method', order.paymentMethod?.name),
               const Divider(height: 32),
 
+              // Items Section
               Text('Items', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              ...o.items.map(
-                (it) => ListTile(
+              ...order.foodList.map(
+                (food) => ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(it.name),
-                  subtitle: Text('x${it.quantity}'),
-                  trailing: Text(_fmtMoney(it.lineTotal)),
+                  title: Text(food.name),
+                  subtitle: Text('x${food.quantity}'),
+                  trailing: Text(_fmtMoney(food.price * food.quantity)),
                 ),
               ),
-              const Divider(height: 32),
-
-              if (o.history.isNotEmpty) ...[
-                Text('History', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                ...o.history.map(
-                  (h) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(h.status),
-                    subtitle: Text(h.note ?? ''),
-                    trailing: Text(_fmtDate(h.changedAt)),
-                  ),
-                ),
-              ],
               const SizedBox(height: 40),
             ],
           );

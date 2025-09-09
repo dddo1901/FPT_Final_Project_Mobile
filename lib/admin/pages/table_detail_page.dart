@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/table_model.dart';
-import '../entities/table_entity.dart';
 import '../services/table_service.dart';
 
 class TableDetailPage extends StatefulWidget {

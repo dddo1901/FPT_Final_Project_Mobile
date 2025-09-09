@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'auths/auth_provider.dart';
 import 'auths/api_service.dart';
 import 'routes/app_routes.dart';
-import 'auths/navigator_observer.dart';
 
 import 'admin/services/user_service.dart';
 import 'admin/services/table_service.dart';
@@ -79,11 +78,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: _navKey,
-      initialRoute: '/', // '/' -> Login
-      routes: appRoutes, // từ app_routes.dart
-      onGenerateRoute: onGenerateRoute, // routes có arguments
-      onUnknownRoute: onUnknownRoute, // 404 fallback
-      navigatorObservers: [LogObserver()],
+      initialRoute: '/',
+      routes: appRoutes,
+      onGenerateRoute: onGenerateRoute, // Add this line if not already present
     );
   }
 }

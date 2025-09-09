@@ -121,8 +121,9 @@ class _UserFormPageState extends State<UserFormPage> {
   String? _confirm(String? v) {
     // Chỉ check khi password hợp lệ hoặc đang tạo mới
     final pwErr = _password(_passwordC.text);
-    if (pwErr == null && v != _passwordC.text)
+    if (pwErr == null && v != _passwordC.text) {
       return 'Xác nhận mật khẩu không khớp';
+    }
     return null;
   }
 

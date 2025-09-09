@@ -3,24 +3,36 @@ import 'package:fpt_final_project_mobile/widgets/ui_actions.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
-import '../../widgets/ui_actions.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
   void _go(BuildContext context, String route, {Object? args}) {
-    Navigator.pushNamed(context, route, arguments: args);
+    debugPrint(
+      '➡️ AdminHome._go: route=$route args=$args',
+    ); // Thêm log để debug
+    try {
+      final result = Navigator.pushNamed(context, route, arguments: args);
+      result.then(
+        (value) => debugPrint('✅ Điều hướng thành công: $route'),
+        onError: (error) => debugPrint('❌ Điều hướng thất bại: $error'),
+      );
+    } catch (e) {
+      debugPrint('❌ Lỗi điều hướng: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi điều hướng: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 700;
-    final cross = isWide ? 3 : 2;
-
     final auth = context.watch<AuthProvider>();
     final claims = _claimsFromJwt(auth.token);
-    final displayName = claims.name ?? 'Unknown';
-    final role = (claims.role ?? 'ADMIN').toUpperCase();
+    
+    // Define these variables from claims
+    final displayName = claims.name ?? claims.email ?? 'Unknown';
+    final role = claims.role?.toUpperCase() ?? 'UNKNOWN';
     final avatarUrl = claims.avatarUrl;
 
     return Scaffold(
@@ -28,18 +40,16 @@ class AdminHome extends StatelessWidget {
         title: const Text('Admin Dashboard'),
         actions: [
           GestureDetector(
-            onTap: () => _go(context, '/admin/profile'),
+            onTap: () {
+              if (claims.userId != null) {
+                _go(context, '/admin/users/${claims.userId}');
+              }
+            },
             child: Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                radius: 16,
-                backgroundImage:
-                    (avatarUrl != null && avatarUrl.startsWith('http'))
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: (avatarUrl == null || !avatarUrl.startsWith('http'))
-                    ? Text(_initials(displayName))
-                    : null,
+                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl == null ? Text(_initials(displayName)) : null,
               ),
             ),
           ),
@@ -56,9 +66,10 @@ class AdminHome extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: GridView.count(
-          crossAxisCount: cross,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisCount: 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 1.0,
           children: [
             _AdminCard(
               icon: Icons.group,
@@ -73,20 +84,18 @@ class AdminHome extends StatelessWidget {
               subtitle: 'List, detail & QR',
               color: Colors.teal,
               onTap: () => _go(context, '/admin/tables'),
-              onLongPress: () => _go(context, '/admin/tables/create'),
             ),
             _AdminCard(
               icon: Icons.fastfood,
               title: 'Foods',
-              subtitle: 'Menu, status & images',
+              subtitle: 'Menu & status',
               color: Colors.orange,
               onTap: () => _go(context, '/admin/foods'),
-              onLongPress: () => _go(context, '/admin/foods/create'),
             ),
             _AdminCard(
               icon: Icons.receipt_long,
               title: 'Orders',
-              subtitle: 'Incoming & history (placeholder)',
+              subtitle: 'View & manage',
               color: Colors.purple,
               onTap: () => _go(context, '/admin/orders'),
             ),
@@ -102,11 +111,12 @@ class _AdminDrawer extends StatelessWidget {
   final String displayName;
   final String role;
   final String? avatarUrl;
+
   const _AdminDrawer({
     required this.onNavigate,
     required this.displayName,
     required this.role,
-    required this.avatarUrl,
+    this.avatarUrl,
   });
 
   @override
@@ -118,43 +128,23 @@ class _AdminDrawer extends StatelessWidget {
           children: [
             UserAccountsDrawerHeader(
               currentAccountPicture: CircleAvatar(
-                backgroundImage:
-                    (avatarUrl != null && avatarUrl!.startsWith('http'))
-                    ? NetworkImage(avatarUrl!)
-                    : null,
-                child: (avatarUrl == null || !avatarUrl!.startsWith('http'))
-                    ? Text(
-                        _initials(displayName),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : null,
+                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+                child: avatarUrl == null ? Text(_initials(displayName)) : null,
               ),
               accountName: Text(displayName),
               accountEmail: Text(role),
               decoration: const BoxDecoration(color: Colors.indigo),
-              onDetailsPressed: () =>
-                  Navigator.pushNamed(context, '/admin/profile'),
             ),
-
             ListTile(
               leading: const Icon(Icons.dashboard),
               title: const Text('Dashboard'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                onNavigate('/admin');
+              },
             ),
             ListTile(
               leading: const Icon(Icons.person),
-              title: const Text('My Profile'),
-              onTap: () {
-                Navigator.pop(context);
-                onNavigate('/admin/profile');
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.group),
               title: const Text('Users'),
               onTap: () {
                 Navigator.pop(context);
@@ -169,6 +159,7 @@ class _AdminDrawer extends StatelessWidget {
                 onNavigate('/admin/tables');
               },
             ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.fastfood),
               title: const Text('Foods'),
@@ -186,7 +177,6 @@ class _AdminDrawer extends StatelessWidget {
               },
             ),
             const Divider(height: 1),
-
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
               title: const Text('Logout'),
@@ -194,6 +184,29 @@ class _AdminDrawer extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void confirmAndLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onNavigate('/');
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
     );
   }
@@ -205,7 +218,6 @@ class _AdminCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
 
   const _AdminCard({
     required this.icon,
@@ -213,50 +225,41 @@ class _AdminCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     this.onTap,
-    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bg = color.withOpacity(0.12);
-    final fg = color;
-
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: fg.withOpacity(0.25)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 36, color: fg),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: fg,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.black87),
-            ),
-            const Spacer(),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Icon(Icons.arrow_forward_ios, size: 16, color: fg),
-            ),
-          ],
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 32, color: color),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -265,8 +268,19 @@ class _AdminCard extends StatelessWidget {
 
 // Helpers (JWT decode mini)
 class _Claims {
-  final String? role, name, avatarUrl;
-  const _Claims({this.role, this.name, this.avatarUrl});
+  final String? userId;  // Changed to String since sub is email
+  final String? role;
+  final String? name;
+  final String? email;
+  final String? avatarUrl;
+
+  const _Claims({
+    this.userId,
+    this.role,
+    this.name,
+    this.email,
+    this.avatarUrl,
+  });
 }
 
 _Claims _claimsFromJwt(String? token) {
@@ -274,32 +288,45 @@ _Claims _claimsFromJwt(String? token) {
   try {
     final parts = token.split('.');
     if (parts.length != 3) return const _Claims();
-    final payload = jsonDecode(
-      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-    );
-    String? pick(List<String> keys) {
-      for (final k in keys) {
-        final v = payload[k];
-        if (v != null && v.toString().isNotEmpty) return v.toString();
-      }
-      return null;
+
+    final normalized = base64Url.normalize(parts[1]);
+    final decoded = utf8.decode(base64Url.decode(normalized));
+    final payload = json.decode(decoded);
+
+    debugPrint('Raw JWT payload: $payload');
+
+    // Extract email from sub claim
+    final email = payload['sub']?.toString();
+    
+    // Extract role from authorities array
+    String? role;
+    if (payload['authorities'] is List) {
+      role = (payload['authorities'] as List)
+        .firstWhere(
+          (auth) => auth.toString().startsWith('ROLE_'),
+          orElse: () => '',
+        ).toString().replaceAll('ROLE_', '');
     }
 
-    String? role = pick(['role', 'ROLE', 'authority']);
-    role ??= (payload['roles'] is List && (payload['roles'] as List).isNotEmpty)
-        ? (payload['roles'] as List).first.toString()
-        : null;
-    role ??=
-        (payload['authorities'] is List &&
-            (payload['authorities'] as List).isNotEmpty)
-        ? (payload['authorities'] as List).first.toString()
-        : null;
+    debugPrint('''
+      Extracted claims:
+      - userId: $email
+      - email: $email
+      - name: $email
+      - role: $role
+      - avatarUrl: null
+    ''');
+
     return _Claims(
+      userId: email,     // Use email as userId
       role: role,
-      name: pick(['name', 'fullName', 'username', 'email', 'sub']),
-      avatarUrl: pick(['avatar', 'avatarUrl', 'image', 'imageUrl', 'picture']),
+      name: email,       // Use email as display name for now
+      email: email,
+      avatarUrl: null,   // No avatar URL in this JWT
     );
-  } catch (_) {
+  } catch (e, stack) {
+    debugPrint('JWT parse error: $e');
+    debugPrint('Stack trace: $stack');
     return const _Claims();
   }
 }
@@ -307,8 +334,9 @@ _Claims _claimsFromJwt(String? token) {
 String _initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
   if (parts.isEmpty) return '?';
-  if (parts.length == 1)
+  if (parts.length == 1) {
     return parts.first.characters.take(2).toString().toUpperCase();
+  }
   return (parts.first.characters.first + parts.last.characters.first)
       .toUpperCase();
 }

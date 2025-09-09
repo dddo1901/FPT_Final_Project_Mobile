@@ -24,8 +24,9 @@ class FoodModel {
 
   factory FoodModel.fromEntity(FoodEntity e, {required String baseUrl}) {
     String? normalize(String? raw) {
-      if (raw == null || raw.isEmpty || raw == 'null' || raw == 'undefined')
+      if (raw == null || raw.isEmpty || raw == 'null' || raw == 'undefined') {
         return null;
+      }
       if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
       final b = baseUrl.endsWith('/')
           ? baseUrl.substring(0, baseUrl.length - 1)

@@ -18,8 +18,9 @@ class OrderService {
   }) async {
     final query = <String>[];
     if (status != null && status.isNotEmpty) query.add('status=$status');
-    if (deliveryStatus != null && deliveryStatus.isNotEmpty)
+    if (deliveryStatus != null && deliveryStatus.isNotEmpty) {
       query.add('deliveryStatus=$deliveryStatus');
+    }
 
     final uri = query.isEmpty
         ? Uri.parse('$baseUrl/api/orders')

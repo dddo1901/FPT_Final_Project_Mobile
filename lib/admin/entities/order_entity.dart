@@ -33,12 +33,13 @@ DateTime? _asDateTime(dynamic v) {
 class OrderEntity {
   final String id;
   final String orderNumber;
-  final dynamic totalPrice; // giữ raw (num/string) đúng “entity”
-  final String? status; // e.g. DELIVERED / CANCELLED
-  final String? deliveryStatus; // e.g. PREPARING / DELIVERING
-  final dynamic createdAt; // giữ raw, model sẽ convert -> DateTime
+  final dynamic totalPrice;
+  final String? status;
+  final String? deliveryStatus;
+  final dynamic createdAt;
 
   final CustomerEntity? customer;
+  final StaffEntity? staff; // Add staff field
   final List<OrderFoodEntity> foodList;
 
   final PaymentMethodEntity? paymentMethod;
@@ -60,6 +61,7 @@ class OrderEntity {
     required this.deliveryStatus,
     required this.createdAt,
     required this.customer,
+    this.staff, // Add to constructor
     required this.foodList,
     required this.paymentMethod,
     required this.voucherCode,
@@ -82,8 +84,9 @@ class OrderEntity {
     final history = <OrderStatusHistoryEntity>[];
     if (j['statusHistory'] is List) {
       for (final h in (j['statusHistory'] as List)) {
-        if (h is Map<String, dynamic>)
+        if (h is Map<String, dynamic>) {
           history.add(OrderStatusHistoryEntity.fromJson(h));
+        }
       }
     }
 
@@ -94,13 +97,16 @@ class OrderEntity {
       status: j['status']?.toString(),
       deliveryStatus: j['deliveryStatus']?.toString(),
       createdAt: j['createdAt'],
-      customer: (j['customer'] is Map<String, dynamic>)
-          ? CustomerEntity.fromJson(j['customer'])
-          : null,
+      customer: j['customer'] == null
+          ? null
+          : CustomerEntity.fromJson(j['customer']),
+      staff: j['staff'] == null
+          ? null
+          : StaffEntity.fromJson(j['staff']), // Add staff mapping
       foodList: foods,
-      paymentMethod: (j['paymentMethod'] is Map<String, dynamic>)
-          ? PaymentMethodEntity.fromJson(j['paymentMethod'])
-          : null,
+      paymentMethod: j['paymentMethod'] == null
+          ? null
+          : PaymentMethodEntity.fromJson(j['paymentMethod']),
       voucherCode: j['voucherCode']?.toString(),
       voucherDiscount: j['voucherDiscount'],
       recipientName: j['recipientName']?.toString(),
@@ -119,8 +125,9 @@ class OrderEntity {
     }
     try {
       final decoded = jsonDecode(data.toString());
-      if (decoded is List)
+      if (decoded is List) {
         return decoded.map((e) => OrderEntity.fromJson(e)).toList();
+      }
     } catch (_) {}
     return [];
   }
@@ -206,4 +213,14 @@ class PaymentMethodEntity {
         id: j['id']?.toString() ?? '',
         name: j['name']?.toString() ?? '',
       );
+}
+
+class StaffEntity {
+  final String? name;
+  final String? email;
+
+  StaffEntity({this.name, this.email});
+
+  factory StaffEntity.fromJson(Map<String, dynamic> j) =>
+      StaffEntity(name: j['name']?.toString(), email: j['email']?.toString());
 }

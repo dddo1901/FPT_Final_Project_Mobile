@@ -54,8 +54,9 @@ class UserService {
       if (sp.address != null) req.fields['address'] = sp.address!;
       if (sp.dob != null) req.fields['dob'] = sp.dob!;
       if (sp.gender != null) req.fields['gender'] = sp.gender!;
-      if (sp.workLocation != null)
+      if (sp.workLocation != null) {
         req.fields['workLocation'] = sp.workLocation!;
+      }
     }
     if (imageFile != null) {
       req.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
@@ -95,8 +96,9 @@ class UserService {
       if (sp.address != null) req.fields['address'] = sp.address!;
       if (sp.dob != null) req.fields['dob'] = sp.dob!;
       if (sp.gender != null) req.fields['gender'] = sp.gender!;
-      if (sp.workLocation != null)
+      if (sp.workLocation != null) {
         req.fields['workLocation'] = sp.workLocation!;
+      }
     }
     if (imageFile != null) {
       req.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
