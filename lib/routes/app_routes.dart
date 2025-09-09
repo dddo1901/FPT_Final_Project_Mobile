@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
 
@@ -22,6 +21,8 @@ import 'package:fpt_final_project_mobile/auths/not_found_page.dart';
 import 'package:fpt_final_project_mobile/auths/role_guard.dart';
 import 'package:fpt_final_project_mobile/auths/verify_otp_page.dart';
 import 'package:fpt_final_project_mobile/staff/pages/staff_home.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_order_list_page.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_table_list_page.dart';
 import 'package:provider/provider.dart';
 
 // Claims helper class
@@ -96,14 +97,14 @@ final Map<String, WidgetBuilder> appRoutes = {
         final auth = ctx.watch<AuthProvider>();
         final claims = _claimsFromJwt(auth.token);
         final userId = claims.userId;
-        
+
         if (userId == null) {
           debugPrint('Missing userId in claims for /admin/profile');
           return const NotFoundPage(
             routeName: '/admin/profile (missing userId)',
           );
         }
-        
+
         return UserDetailPage(userId: userId.toString());
       },
     ),
@@ -178,7 +179,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
   final segments = uri.pathSegments;
 
   // Handle user detail routes
-  if (segments.length == 3 && segments[0] == 'admin' && segments[1] == 'users') {
+  if (segments.length == 3 &&
+      segments[0] == 'admin' &&
+      segments[1] == 'users') {
     final userId = segments[2];
     debugPrint('Handling user detail route for ID: $userId');
 
@@ -186,9 +189,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     if (int.tryParse(userId) == null) {
       debugPrint('Invalid user ID format: $userId');
       return MaterialPageRoute(
-        builder: (_) => const NotFoundPage(
-          routeName: 'Invalid user ID format',
-        ),
+        builder: (_) => const NotFoundPage(routeName: 'Invalid user ID format'),
       );
     }
 
