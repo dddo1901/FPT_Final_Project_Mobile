@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:fpt_final_project_mobile/admin/entities/user_entity.dart';
+import 'package:fpt_final_project_mobile/auths/api_service.dart';
 
 class UserCard extends StatelessWidget {
   final UserEntity user;
@@ -41,22 +43,40 @@ class UserCard extends StatelessWidget {
   }
 
   Widget _avatar() {
-    final initial = (user.username.isNotEmpty ? user.username[0] : '?')
-        .toUpperCase();
-    final image = user.imageUrl;
-
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: Colors.grey.shade200,
-      backgroundImage: (image != null && image.trim().isNotEmpty)
-          ? NetworkImage(image)
-          : null,
-      child: (image == null || image.trim().isEmpty)
-          ? Text(
-              initial,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            )
-          : null,
+    return Builder(
+      builder: (context) {
+        final initial = (user.username.isNotEmpty ? user.username[0] : '?')
+            .toUpperCase();
+        final raw = user.imageUrl;
+        String? fullUrl;
+        if (raw != null && raw.trim().isNotEmpty) {
+          if (raw.startsWith('http://') || raw.startsWith('https://')) {
+            fullUrl = raw;
+          } else if (raw.startsWith('/')) {
+            // relative path -> prepend baseUrl
+            final api = context.read<ApiService>();
+            fullUrl = '${api.baseUrl}$raw';
+          } else {
+            // maybe already partial without leading slash
+            final api = context.read<ApiService>();
+            fullUrl = '${api.baseUrl}/$raw';
+          }
+        }
+        return CircleAvatar(
+          radius: 24,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: (fullUrl != null) ? NetworkImage(fullUrl) : null,
+          child: (fullUrl == null)
+              ? Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : null,
+        );
+      },
     );
   }
 
@@ -152,8 +172,8 @@ class UserCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

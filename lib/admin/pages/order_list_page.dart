@@ -1,8 +1,10 @@
 // lib/admin/pages/order_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import '../models/order_model.dart';
-import '../services/order_service.dart';
+import '../entities/order_entity.dart';
+import '../../auths/api_service.dart';
 
 class OrderListPage extends StatefulWidget {
   const OrderListPage({super.key});
@@ -19,13 +21,47 @@ class _OrderListPageState extends State<OrderListPage> {
   @override
   void initState() {
     super.initState();
-    _future = context.read<OrderService>().getOrders();
+    _future = _fetchOrders();
   }
 
   void _reload() {
     setState(() {
-      _future = context.read<OrderService>().getOrders();
+      _future = _fetchOrders();
     });
+  }
+
+  Future<List<OrderModel>> _fetchOrders() async {
+    final api = context.read<ApiService>();
+    final List<OrderEntity> entities = [];
+
+    Future<void> load(String endpoint) async {
+      try {
+        final res = await api.client.get(Uri.parse('${api.baseUrl}$endpoint'));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final body = res.bodyBytes.isNotEmpty
+              ? utf8.decode(res.bodyBytes)
+              : '';
+          if (body.isNotEmpty) {
+            final data = jsonDecode(body);
+            if (data is List) {
+              entities.addAll(OrderEntity.listFromJson(data));
+            }
+          }
+        } else {
+          debugPrint('Order fetch $endpoint -> HTTP ${res.statusCode}');
+        }
+      } catch (e) {
+        debugPrint('Error fetching $endpoint: $e');
+      }
+    }
+
+    await Future.wait([
+      load('/api/admin/orders/dine-in'),
+      load('/api/admin/orders/take-away'),
+      load('/api/admin/orders/delivery'), // adjust if not available
+    ]);
+
+    return entities.map(OrderModel.fromEntity).toList();
   }
 
   String _fmtMoney(double v) => '${v.toStringAsFixed(0)}đ';

@@ -25,9 +25,9 @@ class LoginStyle {
   );
 
   static const buttonStyle = ButtonStyle(
-    backgroundColor: MaterialStatePropertyAll(Color(0xFF3B82F6)),
-    padding: MaterialStatePropertyAll(EdgeInsets.all(16)),
-    shape: MaterialStatePropertyAll(
+    backgroundColor: WidgetStatePropertyAll(Color(0xFF3B82F6)),
+    padding: WidgetStatePropertyAll(EdgeInsets.all(16)),
+    shape: WidgetStatePropertyAll(
       RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(10)),
       ),

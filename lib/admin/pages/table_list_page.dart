@@ -50,31 +50,10 @@ class _TableListPageState extends State<TableListPage> {
   // Pull-to-refresh cần Future<void>
   Future<void> _onRefresh() => _fetch();
 
-  // Điều hướng
-  Future<void> _goCreate() async {
-    final ok = await Navigator.pushNamed(context, '/admin/tables/create');
-    if (!mounted) return;
-    if (ok == true) _reload();
-  }
-
+  // Điều hướng - chỉ giữ detail
   Future<void> _goDetail(String id) async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/tables/detail',
-      arguments: id,
-    );
-    if (!mounted) return;
-    if (ok == true) _reload();
-  }
-
-  Future<void> _goEdit(String id) async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/tables/edit',
-      arguments: id,
-    );
-    if (!mounted) return;
-    if (ok == true) _reload();
+    await Navigator.pushNamed(context, '/admin/tables/detail', arguments: id);
+    // Không cần reload sau khi xem detail vì không có thay đổi
   }
 
   // Hiển thị text
@@ -89,11 +68,6 @@ class _TableListPageState extends State<TableListPage> {
         title: const Text('Tables'),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
-          FilledButton.tonalIcon(
-            onPressed: _goCreate,
-            icon: const Icon(Icons.add),
-            label: const Text('Add'),
-          ),
         ],
       ),
       body: Column(
@@ -144,8 +118,7 @@ class _TableListPageState extends State<TableListPage> {
                         ),
                         subtitle: Text(_capacityText(t)),
                         trailing: _StatusChip(status: _statusOf(t)),
-                        onTap: () => _goDetail(t.id), // xem chi tiết
-                        onLongPress: () => _goEdit(t.id), // edit nhanh
+                        onTap: () => _goDetail(t.id), // chỉ xem chi tiết
                       );
                     },
                   ),
@@ -166,15 +139,15 @@ class _StatusChip extends StatelessWidget {
   Color _bg() {
     switch (status) {
       case 'AVAILABLE':
-        return Colors.green.withOpacity(0.15);
+        return Colors.green.withValues(alpha: 0.15);
       case 'OCCUPIED':
-        return Colors.orange.withOpacity(0.15);
+        return Colors.orange.withValues(alpha: 0.15);
       case 'RESERVED':
-        return Colors.blue.withOpacity(0.15);
+        return Colors.blue.withValues(alpha: 0.15);
       case 'CLEANING':
-        return Colors.purple.withOpacity(0.15);
+        return Colors.purple.withValues(alpha: 0.15);
       case 'INACTIVE':
-        return Colors.grey.withOpacity(0.15);
+        return Colors.grey.withValues(alpha: 0.15);
       default:
         return Colors.black12;
     }

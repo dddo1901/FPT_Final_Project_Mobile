@@ -64,17 +64,21 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              Navigator.pop(context); // close dialog
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              final userService = context.read<UserService>();
+
+              navigator.pop(); // close dialog
               try {
-                await context.read<UserService>().deleteUser(user.id);
+                await userService.deleteUser(user.id);
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(content: Text('User deleted successfully')),
                 );
-                Navigator.pop(context); // back to list
+                navigator.pop(); // back to list
               } catch (e) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   SnackBar(content: Text('Failed to delete user: $e')),
                 );
               }

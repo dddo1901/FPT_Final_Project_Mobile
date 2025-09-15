@@ -11,6 +11,8 @@ Future<void> confirmAndLogout(
   bool closeDrawerOnCancel = true,
 }) async {
   final auth = context.read<AuthProvider>();
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final navForDrawer = Navigator.of(context);
 
   final bool ok =
       await showDialog<bool>(
@@ -35,14 +37,11 @@ Future<void> confirmAndLogout(
 
   if (ok) {
     await auth.logout();
-    if (!context.mounted) return;
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pushNamedAndRemoveUntil('/', (_) => false);
+    // Use navigator captured before async operation
+    navigator.pushNamedAndRemoveUntil('/', (_) => false);
   } else {
-    if (closeDrawerOnCancel && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    if (closeDrawerOnCancel && navForDrawer.canPop()) {
+      navForDrawer.pop();
     }
   }
 }

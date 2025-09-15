@@ -1,35 +1,5 @@
 import 'dart:convert';
 
-double _asDouble(dynamic v) {
-  if (v is num) return v.toDouble();
-  if (v is String) return double.tryParse(v) ?? 0;
-  return 0;
-}
-
-int? _asInt(dynamic v) {
-  if (v is num) return v.toInt();
-  if (v is String) return int.tryParse(v);
-  return null;
-}
-
-DateTime? _asDateTime(dynamic v) {
-  if (v == null) return null;
-  // ISO-8601 string
-  if (v is String) {
-    try {
-      return DateTime.parse(v);
-    } catch (_) {}
-  }
-  // epoch millis / seconds
-  final i = _asInt(v);
-  if (i != null) {
-    // đoán: nếu quá nhỏ → seconds, nhân 1000
-    final millis = i < 10000000000 ? i * 1000 : i;
-    return DateTime.fromMillisecondsSinceEpoch(millis);
-  }
-  return null;
-}
-
 class OrderEntity {
   final String id;
   final String orderNumber;

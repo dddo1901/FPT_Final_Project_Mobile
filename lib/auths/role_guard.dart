@@ -19,9 +19,10 @@ class RoleGuard extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     if (requireAuth && !auth.isAuthenticated) {
-      Future.microtask(
-        () => Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false),
-      );
+      final navigator = Navigator.of(context);
+      Future.microtask(() {
+        navigator.pushNamedAndRemoveUntil('/', (_) => false);
+      });
       return const SizedBox.shrink();
     }
     if (auth.role != null && allowed.contains(auth.role)) {

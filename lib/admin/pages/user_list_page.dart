@@ -31,6 +31,7 @@ class _UserListPageState extends State<UserListPage> {
   }
 
   void _goDetail(String id) {
+    debugPrint('🔧 _goDetail called with id: $id');
     Navigator.pushNamed(
       context,
       '/admin/users/detail',

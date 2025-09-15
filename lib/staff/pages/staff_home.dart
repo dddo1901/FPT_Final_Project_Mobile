@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/widgets/ui_actions.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
+import 'package:fpt_final_project_mobile/models/claims.dart';
 
 class StaffHome extends StatelessWidget {
   final String userId; // staff hiện tại
@@ -18,10 +18,9 @@ class StaffHome extends StatelessWidget {
     final cross = isWide ? 3 : 2;
 
     final auth = context.watch<AuthProvider>();
-    final claims = _claimsFromJwt(auth.token);
-    final displayName = claims.name ?? 'Unknown';
+    final claims = Claims.fromJwt(auth.token ?? '');
+    final displayName = claims.email;
     final role = (claims.role ?? 'STAFF').toUpperCase();
-    final avatarUrl = claims.avatarUrl;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,13 +32,7 @@ class StaffHome extends StatelessWidget {
               padding: const EdgeInsets.only(right: 12),
               child: CircleAvatar(
                 radius: 16,
-                backgroundImage:
-                    (avatarUrl != null && avatarUrl.startsWith('http'))
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: (avatarUrl == null || !avatarUrl.startsWith('http'))
-                    ? Text(_initials(displayName))
-                    : null,
+                child: Text(_initials(displayName ?? 'Unknown')),
               ),
             ),
           ),
@@ -48,9 +41,9 @@ class StaffHome extends StatelessWidget {
 
       drawer: _StaffDrawer(
         onNavigate: (route, {args}) => _go(context, route, args: args),
-        displayName: displayName,
+        displayName: displayName ?? 'Unknown',
         role: role,
-        avatarUrl: avatarUrl,
+        avatarUrl: null,
         userId: userId,
       ),
 
@@ -62,32 +55,25 @@ class StaffHome extends StatelessWidget {
           mainAxisSpacing: 12,
           children: [
             _StaffCard(
-              icon: Icons.person,
-              title: 'My Profile',
-              subtitle: 'View & update your info',
-              color: Colors.indigo,
-              onTap: () => _go(context, '/staff/profile'),
-            ),
-            _StaffCard(
               icon: Icons.table_restaurant,
               title: 'Tables',
               subtitle: 'List & detail',
               color: Colors.teal,
-              onTap: () => _go(context, '/admin/tables'),
+              onTap: () => _go(context, '/staff/tables'),
             ),
             _StaffCard(
               icon: Icons.fastfood,
               title: 'Foods',
               subtitle: 'Menu & status',
               color: Colors.orange,
-              onTap: () => _go(context, '/admin/foods'),
+              onTap: () => _go(context, '/staff/foods'),
             ),
             _StaffCard(
               icon: Icons.receipt_long,
               title: 'Orders',
-              subtitle: 'Incoming & history (placeholder)',
+              subtitle: 'Incoming & history',
               color: Colors.purple,
-              onTap: () => _go(context, '/admin/orders'),
+              onTap: () => _go(context, '/staff/orders'),
             ),
           ],
         ),
@@ -209,7 +195,7 @@ class _StaffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = color.withOpacity(0.12);
+    final bg = color.withValues(alpha: 0.12);
     final fg = color;
 
     return InkWell(
@@ -220,7 +206,7 @@ class _StaffCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: fg.withOpacity(0.25)),
+          border: Border.all(color: fg.withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,46 +240,6 @@ class _StaffCard extends StatelessWidget {
 }
 
 // Helpers (JWT decode mini)
-class _Claims {
-  final String? role, name, avatarUrl;
-  const _Claims({this.role, this.name, this.avatarUrl});
-}
-
-_Claims _claimsFromJwt(String? token) {
-  if (token == null || token.isEmpty) return const _Claims();
-  try {
-    final parts = token.split('.');
-    if (parts.length != 3) return const _Claims();
-    final payload = jsonDecode(
-      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-    );
-    String? pick(List<String> keys) {
-      for (final k in keys) {
-        final v = payload[k];
-        if (v != null && v.toString().isNotEmpty) return v.toString();
-      }
-      return null;
-    }
-
-    String? role = pick(['role', 'ROLE', 'authority']);
-    role ??= (payload['roles'] is List && (payload['roles'] as List).isNotEmpty)
-        ? (payload['roles'] as List).first.toString()
-        : null;
-    role ??=
-        (payload['authorities'] is List &&
-            (payload['authorities'] as List).isNotEmpty)
-        ? (payload['authorities'] as List).first.toString()
-        : null;
-    return _Claims(
-      role: role,
-      name: pick(['name', 'fullName', 'username', 'email', 'sub']),
-      avatarUrl: pick(['avatar', 'avatarUrl', 'image', 'imageUrl', 'picture']),
-    );
-  } catch (_) {
-    return const _Claims();
-  }
-}
-
 String _initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
   if (parts.isEmpty) return '?';

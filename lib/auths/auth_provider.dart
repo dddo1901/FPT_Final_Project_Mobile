@@ -21,7 +21,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> login({required String token, required String role}) async {
     _token = token;
     _role = role;
-    print(role);
+    // print(role); // Removed print for production
     await storage.write(key: 'token', value: token);
     await storage.write(key: 'role', value: role);
     notifyListeners();

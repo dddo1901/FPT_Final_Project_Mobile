@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import '../models/order_model.dart';
-import '../services/order_service.dart';
+import '../entities/order_entity.dart';
+import '../../auths/api_service.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -17,12 +19,30 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   void initState() {
     super.initState();
-    _future = context.read<OrderService>().getOrderById(widget.orderId);
+    _future = _getOrderById(widget.orderId);
+  }
+
+  Future<OrderModel> _getOrderById(String id) async {
+    final apiService = context.read<ApiService>();
+    final response = await apiService.client.get(
+      Uri.parse('${apiService.baseUrl}/api/admin/orders/$id'),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = response.bodyBytes.isNotEmpty
+          ? utf8.decode(response.bodyBytes)
+          : '';
+      final entity = OrderEntity.fromJson(jsonDecode(body));
+      return OrderModel.fromEntity(entity);
+    }
+    throw Exception(
+      'GET order by id -> ${response.statusCode}: ${response.body}',
+    );
   }
 
   void _reload() {
     setState(() {
-      _future = context.read<OrderService>().getOrderById(widget.orderId);
+      _future = _getOrderById(widget.orderId);
     });
   }
 

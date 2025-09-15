@@ -46,47 +46,10 @@ class _FoodListPageState extends State<FoodListPage> {
   // ⤵️ Pull-to-refresh
   Future<void> _onRefresh() => _fetch();
 
-  // Điều hướng
-  Future<void> _goCreate() async {
-    final ok = await Navigator.pushNamed(context, '/admin/foods/create');
-    if (!mounted) return;
-    if (ok == true) _reload();
-  }
-
+  // Điều hướng - chỉ giữ detail
   Future<void> _goDetail(String id) async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/foods/detail',
-      arguments: id,
-    );
-    if (!mounted) return;
-    if (ok == true) _reload();
-  }
-
-  Future<void> _goEdit(String id) async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/foods/edit',
-      arguments: id,
-    );
-    if (!mounted) return;
-    if (ok == true) _reload();
-  }
-
-  Future<void> _setStatus(FoodModel f, String newStatus) async {
-    try {
-      await context.read<FoodService>().updateStatus(f.id, newStatus);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Set "${f.name}" → $newStatus')));
-      _reload();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Change status failed: $e')));
-    }
+    await Navigator.pushNamed(context, '/admin/foods/detail', arguments: id);
+    // Không reload vì chỉ xem detail
   }
 
   Color _statusColor(String s) {
@@ -107,11 +70,6 @@ class _FoodListPageState extends State<FoodListPage> {
         title: const Text('Foods'),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
-          FilledButton.tonalIcon(
-            onPressed: _goCreate,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Food'),
-          ),
         ],
       ),
       body: Column(
@@ -177,43 +135,29 @@ class _FoodListPageState extends State<FoodListPage> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(f.priceText),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) => _setStatus(f, value),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: 'AVAILABLE',
-                              child: Text('Set AVAILABLE'),
-                            ),
-                            PopupMenuItem(
-                              value: 'UNAVAILABLE',
-                              child: Text('Set UNAVAILABLE'),
-                            ),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 10,
-                                  color: _statusColor(f.status),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(f.status),
-                              ],
-                            ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.circle,
+                                size: 10,
+                                color: _statusColor(f.status),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(f.status),
+                            ],
                           ),
                         ),
-                        onTap: () => _goDetail(f.id),
-                        onLongPress: () => _goEdit(f.id),
+                        onTap: () => _goDetail(f.id), // chỉ xem detail
                       );
                     },
                   ),

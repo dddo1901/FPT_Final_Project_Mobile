@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fpt_final_project_mobile/widgets/ui_actions.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
@@ -29,7 +28,7 @@ class AdminHome extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final claims = _claimsFromJwt(auth.token);
-    
+
     // Define these variables from claims
     final displayName = claims.name ?? claims.email ?? 'Unknown';
     final role = claims.role?.toUpperCase() ?? 'UNKNOWN';
@@ -41,14 +40,15 @@ class AdminHome extends StatelessWidget {
         actions: [
           GestureDetector(
             onTap: () {
-              if (claims.userId != null) {
-                _go(context, '/admin/users/${claims.userId}');
-              }
+              // Navigate to profile page instead of user detail
+              _go(context, '/admin/profile');
             },
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                backgroundImage: avatarUrl != null
+                    ? NetworkImage(avatarUrl)
+                    : null,
                 child: avatarUrl == null ? Text(_initials(displayName)) : null,
               ),
             ),
@@ -128,7 +128,9 @@ class _AdminDrawer extends StatelessWidget {
           children: [
             UserAccountsDrawerHeader(
               currentAccountPicture: CircleAvatar(
-                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+                backgroundImage: avatarUrl != null
+                    ? NetworkImage(avatarUrl!)
+                    : null,
                 child: avatarUrl == null ? Text(_initials(displayName)) : null,
               ),
               accountName: Text(displayName),
@@ -245,9 +247,9 @@ class _AdminCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: color,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: color),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -268,7 +270,7 @@ class _AdminCard extends StatelessWidget {
 
 // Helpers (JWT decode mini)
 class _Claims {
-  final String? userId;  // Changed to String since sub is email
+  final String? userId; // Changed to String since sub is email
   final String? role;
   final String? name;
   final String? email;
@@ -297,15 +299,17 @@ _Claims _claimsFromJwt(String? token) {
 
     // Extract email from sub claim
     final email = payload['sub']?.toString();
-    
+
     // Extract role from authorities array
     String? role;
     if (payload['authorities'] is List) {
       role = (payload['authorities'] as List)
-        .firstWhere(
-          (auth) => auth.toString().startsWith('ROLE_'),
-          orElse: () => '',
-        ).toString().replaceAll('ROLE_', '');
+          .firstWhere(
+            (auth) => auth.toString().startsWith('ROLE_'),
+            orElse: () => '',
+          )
+          .toString()
+          .replaceAll('ROLE_', '');
     }
 
     debugPrint('''
@@ -318,11 +322,11 @@ _Claims _claimsFromJwt(String? token) {
     ''');
 
     return _Claims(
-      userId: email,     // Use email as userId
+      userId: email, // Use email as userId
       role: role,
-      name: email,       // Use email as display name for now
+      name: email, // Use email as display name for now
       email: email,
-      avatarUrl: null,   // No avatar URL in this JWT
+      avatarUrl: null, // No avatar URL in this JWT
     );
   } catch (e, stack) {
     debugPrint('JWT parse error: $e');

@@ -123,4 +123,17 @@ class UserService {
       throw Exception('Delete user failed: ${res.statusCode} ${res.body}');
     }
   }
+
+  // Fetch current authenticated user profile (assuming backend provides the endpoint)
+  Future<UserModel> getCurrentUser() async {
+    final res = await client.get(Uri.parse('$baseUrl/api/auth/me'));
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      if (body.isEmpty) {
+        throw Exception('Empty response for current user');
+      }
+      return UserModel.fromJson(jsonDecode(body));
+    }
+    throw Exception('GET current user -> ${res.statusCode}: $body');
+  }
 }
