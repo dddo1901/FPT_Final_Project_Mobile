@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../models/order_model.dart';
 import '../entities/order_entity.dart';
 import '../../auths/api_service.dart';
+import '../../styles/app_theme.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -113,7 +114,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     });
   }
 
-  String _fmtMoney(double v) => '\$${(v / 25000).toStringAsFixed(2)}';
+  String _fmtMoney(double v) => '\$${v.toStringAsFixed(2)}';
   String _fmtDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year} ${d.hour}:${d.minute}';
 
@@ -121,99 +122,513 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Details'),
+        title: const Text(
+          'Order Details',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _reload),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _reload,
+          ),
         ],
       ),
-      body: FutureBuilder<OrderModel>(
-        future: _future,
-        builder: (_, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
-          }
-          final order = snap.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Order #${order.orderNumber}',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 6),
-              Text('Created: ${_fmtDate(order.createdAt)}'),
-              const SizedBox(height: 6),
-              Text('Status: ${order.status}'),
-              Text('Delivery Status: ${order.deliveryStatus ?? '—'}'),
-              const SizedBox(height: 6),
-              Text(
-                'Total: ${_fmtMoney(order.totalPrice)}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const Divider(height: 32),
-
-              // Customer Section
-              Text('Customer', style: Theme.of(context).textTheme.titleMedium),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(order.customer?.fullName ?? 'Guest'),
-                subtitle: Text(order.customer?.email ?? '—'),
-              ),
-              const Divider(height: 32),
-
-              // Delivery Section
-              Text('Delivery', style: Theme.of(context).textTheme.titleMedium),
-              _kv('Recipient', order.recipientName),
-              _kv('Phone', order.recipientPhone),
-              _kv('Address', order.deliveryAddress),
-              const Divider(height: 32),
-
-              // Payment Section
-              Text('Payment', style: Theme.of(context).textTheme.titleMedium),
-              _kv('Method', order.paymentMethod?.name),
-              const Divider(height: 32),
-
-              // Items Section
-              Text('Items', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (order.foodList.isEmpty)
-                const Text(
-                  'Server returned empty foodList',
-                  style: TextStyle(color: Colors.grey),
-                )
-              else ...[
-                ...order.foodList.map(
-                  (food) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(food.name),
-                    subtitle: Text('x${food.quantity}'),
-                    trailing: Text(_fmtMoney(food.price * food.quantity)),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: FutureBuilder<OrderModel>(
+          future: _future,
+          builder: (_, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                ),
+              );
+            }
+            if (snap.hasError) {
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.danger.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: AppTheme.danger,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error: ${snap.error}',
+                        style: TextStyle(
+                          color: AppTheme.danger,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
+              );
+            }
+            final order = snap.data!;
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Order Header
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Order #${order.orderNumber}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _getStatusColor(
+                                  order.status,
+                                ).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              order.status,
+                              style: TextStyle(
+                                color: _getStatusColor(order.status),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Basic Info Cards
+                      _InfoCard(
+                        'Created',
+                        _fmtDate(order.createdAt),
+                        Icons.access_time,
+                        AppTheme.info,
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoCard(
+                        'Delivery Status',
+                        order.deliveryStatus ?? '—',
+                        Icons.local_shipping,
+                        AppTheme.warning,
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoCard(
+                        'Total Amount',
+                        _fmtMoney(order.totalPrice),
+                        Icons.attach_money,
+                        AppTheme.success,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Customer Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.person, color: AppTheme.primary, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Customer Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.lightBlue,
+                          child: const Icon(
+                            Icons.person,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        title: Text(
+                          order.customer?.fullName ?? 'Guest',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        subtitle: Text(
+                          order.customer?.email ?? '—',
+                          style: const TextStyle(color: AppTheme.textMedium),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Delivery Section - Hide for DINE IN orders
+                if (!_looksLikeDineIn(order)) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppTheme.softShadow,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.local_shipping,
+                              color: AppTheme.primary,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Delivery Information',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _DetailRow('Recipient', order.recipientName),
+                        _DetailRow('Phone', order.recipientPhone),
+                        _DetailRow('Address', order.deliveryAddress),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Payment Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.payment,
+                            color: AppTheme.primary,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Payment Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _DetailRow('Method', order.paymentMethod?.name),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Items Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            color: AppTheme.primary,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Order Items',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (order.foodList.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warning.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppTheme.warning.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: AppTheme.warning,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Server returned empty foodList',
+                                style: TextStyle(
+                                  color: AppTheme.warning,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else ...[
+                        ...order.foodList.map(
+                          (food) => Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.lightBlue,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppTheme.primary.withOpacity(0.1),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.restaurant,
+                                    color: AppTheme.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        food.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.textDark,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Quantity: ${food.quantity}',
+                                        style: const TextStyle(
+                                          color: AppTheme.textMedium,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  _fmtMoney(food.price * food.quantity),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.success,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
               ],
-              const SizedBox(height: 40),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _kv(String k, String? v) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return AppTheme.warning;
+      case 'CONFIRMED':
+        return AppTheme.info;
+      case 'PROCESSING':
+        return AppTheme.info;
+      case 'DELIVERED':
+        return AppTheme.success;
+      case 'CANCELLED':
+        return AppTheme.danger;
+      default:
+        return AppTheme.textMedium;
+    }
+  }
+
+  Widget _DetailRow(String label, String? value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 120,
-          child: Text(k, style: const TextStyle(fontWeight: FontWeight.w600)),
+          width: 100,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMedium,
+              fontSize: 14,
+            ),
+          ),
         ),
-        Expanded(child: Text(v == null || v.trim().isEmpty ? '—' : v)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value == null || value.trim().isEmpty ? '—' : value,
+            style: const TextStyle(color: AppTheme.textDark, fontSize: 14),
+          ),
+        ),
       ],
     ),
   );
+}
+
+class _InfoCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _InfoCard(this.label, this.value, this.icon, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -66,4 +66,71 @@ class ApiService {
     }
     throw Exception('Resend OTP failed: ${res.statusCode} $body');
   }
+
+  // -------- DASHBOARD --------
+  Future<Map<String, dynamic>> getDashboardAnalytics() async {
+    final url = Uri.parse('$baseUrl/api/admin/dashboard/analytics');
+    final res = await client.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
+    }
+    throw Exception('Get analytics failed: ${res.statusCode} $body');
+  }
+
+  Future<Map<String, dynamic>> getCustomerStatistics() async {
+    final url = Uri.parse('$baseUrl/api/admin/dashboard/customers');
+    final res = await client.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
+    }
+    throw Exception('Get customer stats failed: ${res.statusCode} $body');
+  }
+
+  Future<Map<String, dynamic>> getRevenueAnalytics({
+    String timeRange = 'month',
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/api/admin/dashboard/revenue?timeRange=$timeRange',
+    );
+    final res = await client.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as Map<String, dynamic>)
+          : <String, dynamic>{};
+    }
+    throw Exception('Get revenue analytics failed: ${res.statusCode} $body');
+  }
+
+  Future<List<dynamic>> getVIPCustomers({int limit = 10}) async {
+    final url = Uri.parse(
+      '$baseUrl/api/admin/dashboard/vip-customers?limit=$limit',
+    );
+    final res = await client.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+    final body = _decode(res);
+    if (_ok(res.statusCode)) {
+      return body.isNotEmpty
+          ? (jsonDecode(body) as List<dynamic>)
+          : <dynamic>[];
+    }
+    throw Exception('Get VIP customers failed: ${res.statusCode} $body');
+  }
 }

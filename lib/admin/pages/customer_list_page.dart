@@ -372,7 +372,7 @@ class _CustomerListPageState extends State<CustomerListPage> {
         content: Text(
           'Are you sure you want to ${customer.isActive ? "deactivate" : "activate"} '
           '${customer.fullName ?? customer.email}?\n\n'
-          '${customer.isActive ? "Deactivating will prevent this customer from logging in and placing orders." : "Activating will restore this customer\'s access to the system."}',
+          '${customer.isActive ? "Deactivating will prevent this customer from logging in and placing orders." : "Activating will restore this customer's access to the system."}',
         ),
         actions: [
           TextButton(

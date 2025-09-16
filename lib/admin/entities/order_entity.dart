@@ -5,6 +5,7 @@ class OrderEntity {
   final String orderNumber;
   final dynamic totalPrice;
   final String? status;
+  final String? orderType; // Thêm orderType
   final String? deliveryStatus;
   final dynamic createdAt;
 
@@ -28,6 +29,7 @@ class OrderEntity {
     required this.orderNumber,
     required this.totalPrice,
     required this.status,
+    required this.orderType, // Thêm vào constructor
     required this.deliveryStatus,
     required this.createdAt,
     required this.customer,
@@ -45,9 +47,30 @@ class OrderEntity {
 
   factory OrderEntity.fromJson(Map<String, dynamic> j) {
     final foods = <OrderFoodEntity>[];
+
+    // Try to parse foodList first (standard orders)
     if (j['foodList'] is List) {
       for (final f in (j['foodList'] as List)) {
         if (f is Map<String, dynamic>) foods.add(OrderFoodEntity.fromJson(f));
+      }
+    }
+    // If no foodList, try orderItems (dine-in orders)
+    else if (j['orderItems'] is List) {
+      for (final item in (j['orderItems'] as List)) {
+        if (item is Map<String, dynamic>) {
+          // Convert orderItem to OrderFoodEntity format
+          final converted = <String, dynamic>{
+            'id':
+                item['food']?['id']?.toString() ?? item['id']?.toString() ?? '',
+            'name':
+                item['food']?['name']?.toString() ??
+                item['foodName']?.toString() ??
+                'Unknown',
+            'price': item['food']?['price'] ?? item['foodPrice'] ?? 0.0,
+            'quantity': item['quantity'] ?? 1,
+          };
+          foods.add(OrderFoodEntity.fromJson(converted));
+        }
       }
     }
 
@@ -65,18 +88,23 @@ class OrderEntity {
       orderNumber: j['orderNumber']?.toString() ?? '',
       totalPrice: j['totalPrice'],
       status: j['status']?.toString(),
+      orderType: j['orderType']?.toString(), // Map orderType từ JSON
       deliveryStatus: j['deliveryStatus']?.toString(),
       createdAt: j['createdAt'],
-      customer: j['customer'] == null
+      customer: j['customer'] == null || j['customer'] is! Map<String, dynamic>
           ? null
-          : CustomerEntity.fromJson(j['customer']),
-      staff: j['staff'] == null
+          : CustomerEntity.fromJson(j['customer'] as Map<String, dynamic>),
+      staff: j['staff'] == null || j['staff'] is! Map<String, dynamic>
           ? null
-          : StaffEntity.fromJson(j['staff']), // Add staff mapping
+          : StaffEntity.fromJson(j['staff'] as Map<String, dynamic>),
       foodList: foods,
-      paymentMethod: j['paymentMethod'] == null
+      paymentMethod:
+          j['paymentMethod'] == null ||
+              j['paymentMethod'] is! Map<String, dynamic>
           ? null
-          : PaymentMethodEntity.fromJson(j['paymentMethod']),
+          : PaymentMethodEntity.fromJson(
+              j['paymentMethod'] as Map<String, dynamic>,
+            ),
       voucherCode: j['voucherCode']?.toString(),
       voucherDiscount: j['voucherDiscount'],
       recipientName: j['recipientName']?.toString(),
@@ -90,13 +118,17 @@ class OrderEntity {
   static List<OrderEntity> listFromJson(dynamic data) {
     if (data is List) {
       return data
+          .where((e) => e is Map<String, dynamic>)
           .map((e) => OrderEntity.fromJson(e as Map<String, dynamic>))
           .toList();
     }
     try {
       final decoded = jsonDecode(data.toString());
       if (decoded is List) {
-        return decoded.map((e) => OrderEntity.fromJson(e)).toList();
+        return decoded
+            .where((e) => e is Map<String, dynamic>)
+            .map((e) => OrderEntity.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
     } catch (_) {}
     return [];

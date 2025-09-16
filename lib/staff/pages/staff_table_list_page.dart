@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../admin/entities/table_entity.dart';
 import '../../admin/services/table_service.dart';
+import '../../styles/app_theme.dart';
 
 class StaffTableListPage extends StatefulWidget {
   const StaffTableListPage({super.key});
@@ -57,110 +58,256 @@ class _StaffTableListPageState extends State<StaffTableListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        title: const Text('Tables'),
-        backgroundColor: Colors.orange.shade50,
+        title: const Text(
+          'Tables (Staff)',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                hintText: 'Search by table number...',
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: Column(
+          children: [
+            // Search bar
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppTheme.softShadow,
               ),
-              onChanged: (v) => setState(() => _search = v.trim()),
-            ),
-          ),
-          // Table list
-          Expanded(
-            child: FutureBuilder<List<TableEntity>>(
-              future: _future,
-              builder: (context, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snap.hasError) {
-                  return Center(child: Text('Error: ${snap.error}'));
-                }
-
-                final data = snap.data ?? const <TableEntity>[];
-                final list = data.where((t) {
-                  if (_search.isEmpty) return true;
-                  final key = (t.number ?? t.id).toString();
-                  return key.contains(_search);
-                }).toList();
-
-                if (list.isEmpty) return const Center(child: Text('No tables'));
-
-                return RefreshIndicator(
-                  onRefresh: _onRefresh,
-                  child: ListView.separated(
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final t = list[i];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.orange.shade100,
-                            child: Icon(
-                              Icons.table_restaurant,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                          title: Text(
-                            _title(t),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                _capacityText(t),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              if (t.location != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Location: ${t.location}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade500,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          trailing: _StaffStatusChip(status: _statusOf(t)),
-                          onTap: () => _goDetail(t.id),
-                        ),
-                      );
-                    },
+              child: TextField(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search, color: AppTheme.primary),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: AppTheme.primary.withOpacity(0.3),
+                    ),
                   ),
-                );
-              },
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  hintText: 'Search by table number...',
+                  hintStyle: const TextStyle(color: AppTheme.textMedium),
+                ),
+                onChanged: (v) => setState(() => _search = v.trim()),
+              ),
             ),
-          ),
-        ],
+            // Table list
+            Expanded(
+              child: FutureBuilder<List<TableEntity>>(
+                future: _future,
+                builder: (context, snap) {
+                  if (snap.connectionState != ConnectionState.done) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.primary,
+                        ),
+                      ),
+                    );
+                  }
+                  if (snap.hasError) {
+                    return Center(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.danger.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: AppTheme.danger,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error: ${snap.error}',
+                              style: TextStyle(
+                                color: AppTheme.danger,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final data = snap.data ?? const <TableEntity>[];
+                  final list = data.where((t) {
+                    if (_search.isEmpty) return true;
+                    final key = (t.number ?? t.id).toString();
+                    return key.contains(_search);
+                  }).toList();
+
+                  if (list.isEmpty) {
+                    return Center(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: AppTheme.softShadow,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.table_restaurant_outlined,
+                              size: 64,
+                              color: AppTheme.textMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'No tables found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    color: AppTheme.primary,
+                    onRefresh: _onRefresh,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) {
+                        final t = list[i];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: AppTheme.softShadow,
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => _goDetail(t.id),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient: AppTheme.cardHeaderGradient,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.table_restaurant,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _title(t),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                                color: AppTheme.textDark,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _capacityText(t),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: AppTheme.textMedium,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      _StaffStatusChip(status: _statusOf(t)),
+                                    ],
+                                  ),
+                                  if (t.location != null) ...[
+                                    const SizedBox(height: 12),
+                                    Divider(color: AppTheme.divider, height: 1),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.location_on,
+                                          color: AppTheme.warning,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Location: ${t.location}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppTheme.textMedium,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -173,34 +320,34 @@ class _StaffStatusChip extends StatelessWidget {
   Color _bg() {
     switch (status) {
       case 'AVAILABLE':
-        return Colors.green.withValues(alpha: 0.1);
+        return AppTheme.success.withOpacity(0.1);
       case 'OCCUPIED':
-        return Colors.red.withValues(alpha: 0.1);
+        return AppTheme.danger.withOpacity(0.1);
       case 'RESERVED':
-        return Colors.blue.withValues(alpha: 0.1);
+        return AppTheme.info.withOpacity(0.1);
       case 'CLEANING':
-        return Colors.purple.withValues(alpha: 0.1);
+        return AppTheme.warning.withOpacity(0.1);
       case 'INACTIVE':
-        return Colors.grey.withValues(alpha: 0.1);
+        return AppTheme.textMedium.withOpacity(0.1);
       default:
-        return Colors.black12;
+        return AppTheme.textMedium.withOpacity(0.1);
     }
   }
 
   Color _fg() {
     switch (status) {
       case 'AVAILABLE':
-        return Colors.green.shade700;
+        return AppTheme.success;
       case 'OCCUPIED':
-        return Colors.red.shade700;
+        return AppTheme.danger;
       case 'RESERVED':
-        return Colors.blue.shade700;
+        return AppTheme.info;
       case 'CLEANING':
-        return Colors.purple.shade700;
+        return AppTheme.warning;
       case 'INACTIVE':
-        return Colors.grey.shade700;
+        return AppTheme.textMedium;
       default:
-        return Colors.grey.shade800;
+        return AppTheme.textMedium;
     }
   }
 

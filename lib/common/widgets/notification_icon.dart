@@ -7,8 +7,7 @@ class NotificationIcon extends StatelessWidget {
   final Color? iconColor;
   final double iconSize;
 
-  const NotificationIcon({Key? key, this.iconColor, this.iconSize = 24.0})
-    : super(key: key);
+  const NotificationIcon({super.key, this.iconColor, this.iconSize = 24.0});
 
   @override
   Widget build(BuildContext context) {

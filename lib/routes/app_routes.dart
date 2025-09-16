@@ -9,11 +9,9 @@ import 'package:fpt_final_project_mobile/admin/pages/order_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_management_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/customer_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/voucher_management_page.dart';
-import 'package:fpt_final_project_mobile/admin/pages/chatbot_management_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/request_management_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/request_create_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/staff_request_list_page.dart';
-import 'package:fpt_final_project_mobile/admin/pages/notification_demo_page.dart';
 
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
@@ -101,10 +99,6 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/admin/vouchers': (_) =>
       const RoleGuard(allowed: ['ADMIN'], child: VoucherManagementPage()),
 
-  // 🔐 Admin Chatbot
-  '/admin/chatbot': (_) =>
-      const RoleGuard(allowed: ['ADMIN'], child: ChatbotManagementPage()),
-
   // 🔐 Admin Request Management
   '/admin/requests': (_) =>
       const RoleGuard(allowed: ['ADMIN'], child: RequestManagementPage()),
@@ -115,12 +109,6 @@ final Map<String, WidgetBuilder> appRoutes = {
 
   '/staff/request/create': (_) =>
       const RoleGuard(allowed: ['STAFF'], child: RequestCreatePage()),
-
-  // 🔐 Notification Demo (for both admin and staff)
-  '/notification-demo': (_) => const RoleGuard(
-    allowed: ['ADMIN', 'STAFF'],
-    child: NotificationDemoPage(),
-  ),
 
   // ==================== STAFF ====================
 
@@ -247,7 +235,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => RoleGuard(
-          allowed: const ['ADMIN'],
+          allowed: const ['ADMIN', 'STAFF'],
           child: FoodDetailPage(foodId: foodId),
         ),
       );
@@ -264,7 +252,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => RoleGuard(
-          allowed: const ['ADMIN'],
+          allowed: const ['ADMIN', 'STAFF'],
           child: TableDetailPage(tableId: tableId),
         ),
       );

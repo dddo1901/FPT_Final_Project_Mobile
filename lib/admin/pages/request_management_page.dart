@@ -743,13 +743,13 @@ Future<bool?> _showConfirmationDialog(
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(title.contains('Approve') ? 'Approve' : 'Deny'),
             style: ElevatedButton.styleFrom(
               backgroundColor: title.contains('Approve')
                   ? Colors.green
                   : Colors.red,
               foregroundColor: Colors.white,
             ),
+            child: Text(title.contains('Approve') ? 'Approve' : 'Deny'),
           ),
         ],
       );

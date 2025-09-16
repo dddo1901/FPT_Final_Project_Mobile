@@ -4,7 +4,7 @@ import '../providers/notification_provider.dart';
 import '../models/notification_data.dart';
 
 class NotificationPanel extends StatelessWidget {
-  const NotificationPanel({Key? key}) : super(key: key);
+  const NotificationPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -154,10 +154,10 @@ class NotificationHistoryItem extends StatelessWidget {
   final VoidCallback? onTap;
 
   const NotificationHistoryItem({
-    Key? key,
+    super.key,
     required this.notification,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

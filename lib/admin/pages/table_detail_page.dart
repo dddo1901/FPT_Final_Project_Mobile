@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/table_model.dart';
 import '../services/table_service.dart';
+import '../../styles/app_theme.dart';
 
 class TableDetailPage extends StatefulWidget {
   final String tableId;
@@ -28,8 +30,11 @@ class _TableDetailPageState extends State<TableDetailPage> {
     try {
       final svc = context.read<TableService>();
       final entity = await svc.getTableById(widget.tableId);
-      final qr = await svc.getTableQr(widget.tableId);
-      final model = TableModel.fromEntity(entity, qrFromApi: qr);
+
+      // Tạo QR URL theo format: http://localhost:3000/order?table=tableId
+      final customQrUrl = 'http://localhost:3000/order?table=${widget.tableId}';
+
+      final model = TableModel.fromEntity(entity, qrFromApi: customQrUrl);
       if (!mounted) return;
       setState(() {
         _model = model; // ✅ gán dữ liệu đã có, không để Future trong setState
@@ -49,55 +54,201 @@ class _TableDetailPageState extends State<TableDetailPage> {
     final m = _model;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Table Detail')),
-      body: _loading && m == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        (m?.title ?? 'Table #${widget.tableId}'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+      appBar: AppBar(
+        title: const Text(
+          'Table Detail',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: _loading && m == null
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                ),
+              )
+            : RefreshIndicator(
+                color: AppTheme.primary,
+                onRefresh: _refresh,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: AppTheme.softShadow,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _Info('Status', m?.status ?? '—'),
-                  _Info('Capacity', m?.capacity?.toString() ?? '—'),
-                  _Info('Location', m?.location ?? '—'),
-                  _Info('Description', m?.description ?? '—'),
-                  const SizedBox(height: 16),
-                  Text(
-                    'QR Code',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m?.title ?? 'Table #${widget.tableId}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _InfoCard(
+                            'Status',
+                            m?.status ?? '—',
+                            Icons.info_outline,
+                            _getStatusColor(m?.status ?? ''),
+                          ),
+                          const SizedBox(height: 12),
+                          _InfoCard(
+                            'Capacity',
+                            m?.capacity?.toString() ?? '—',
+                            Icons.people,
+                            AppTheme.info,
+                          ),
+                          const SizedBox(height: 12),
+                          _InfoCard(
+                            'Location',
+                            m?.location ?? '—',
+                            Icons.location_on,
+                            AppTheme.warning,
+                          ),
+                          const SizedBox(height: 12),
+                          _InfoCard(
+                            'Description',
+                            m?.description ?? '—',
+                            Icons.description,
+                            AppTheme.textMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'QR Code',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _QrViewer(qr: m?.qrUrl),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  _QrViewer(qr: m?.qrUrl),
-                  const SizedBox(height: 40),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'AVAILABLE':
+        return AppTheme.success;
+      case 'OCCUPIED':
+        return AppTheme.warning;
+      case 'RESERVED':
+        return AppTheme.info;
+      case 'MAINTENANCE':
+        return AppTheme.danger;
+      default:
+        return AppTheme.textMedium;
+    }
   }
 }
 
 class _QrViewer extends StatelessWidget {
-  final String? qr; // http/https | data-url | base64 | null
+  final String? qr; // QR URL text hoặc image
   const _QrViewer({required this.qr});
 
   @override
   Widget build(BuildContext context) {
-    Widget child;
     if (qr == null || qr!.isEmpty) {
-      child = _placeholder();
-    } else if (qr!.startsWith('data:image')) {
+      return _placeholder();
+    }
+
+    // Nếu là URL order link, tạo QR code image
+    if (qr!.startsWith('http://localhost:3000/order?table=')) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+          boxShadow: AppTheme.softShadow,
+        ),
+        child: Column(
+          children: [
+            // QR Code Image
+            QrImageView(
+              data: qr!,
+              version: QrVersions.auto,
+              size: 200.0,
+              backgroundColor: Colors.white,
+              foregroundColor: AppTheme.primary,
+            ),
+            const SizedBox(height: 16),
+            // URL Text
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.lightBlue,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.qr_code, color: AppTheme.primary, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Table Order URL:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    qr!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMedium,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Xử lý QR code images như cũ
+    Widget child;
+    if (qr!.startsWith('data:image')) {
       // data-url → decode base64 phía sau dấu ','
       try {
         final base64Str = qr!.split(',').last;
@@ -138,25 +289,77 @@ class _QrViewer extends StatelessWidget {
     height: 200,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: Colors.black12,
+      gradient: AppTheme.cardHeaderGradient,
       borderRadius: BorderRadius.circular(12),
     ),
-    child: const Text('No QR image'),
+    child: const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.qr_code_scanner, color: Colors.white, size: 48),
+        SizedBox(height: 8),
+        Text(
+          'No QR image',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
   );
 }
 
-class _Info extends StatelessWidget {
+class _InfoCard extends StatelessWidget {
   final String label;
   final String value;
-  const _Info(this.label, this.value);
+  final IconData icon;
+  final Color color;
+
+  const _InfoCard(this.label, this.value, this.icon, this.color);
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(value),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

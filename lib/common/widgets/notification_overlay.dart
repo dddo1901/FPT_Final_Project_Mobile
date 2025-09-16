@@ -6,7 +6,7 @@ import '../widgets/notification_widget.dart';
 class NotificationOverlay extends StatelessWidget {
   final Widget child;
 
-  const NotificationOverlay({Key? key, required this.child}) : super(key: key);
+  const NotificationOverlay({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {

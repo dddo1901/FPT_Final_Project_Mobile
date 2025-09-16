@@ -4,6 +4,7 @@ class OrderModel {
   final String id; // Sửa từ int sang String để match với Entity
   final String orderNumber;
   final String status;
+  final String? orderType; // Thêm orderType
   final double totalPrice;
   final DateTime createdAt;
   final CustomerModel? customer;
@@ -21,6 +22,7 @@ class OrderModel {
     required this.id,
     required this.orderNumber,
     required this.status,
+    this.orderType, // Thêm vào constructor
     required this.totalPrice,
     required this.createdAt,
     this.customer,
@@ -38,6 +40,7 @@ class OrderModel {
       id: e.id,
       orderNumber: e.orderNumber,
       status: e.status ?? 'UNKNOWN',
+      orderType: e.orderType, // Map orderType từ entity
       totalPrice: _asDouble(e.totalPrice),
       createdAt: _asDateTime(e.createdAt) ?? DateTime.now(),
       customer: e.customer != null
@@ -67,6 +70,7 @@ class OrderModel {
       id: id,
       orderNumber: orderNumber,
       status: status ?? this.status,
+      orderType: orderType, // Thêm orderType
       totalPrice: totalPrice ?? this.totalPrice,
       createdAt: createdAt,
       customer: customer,
@@ -118,20 +122,38 @@ class FoodOrder {
 
   // Factory for dine-in orderItems from fallback API
   factory FoodOrder.fromDineInItem(Map<String, dynamic> item) {
+    // Handle both direct fields and nested food object
+    String name = 'Unknown';
+    double price = 0.0;
+    String id = '';
+
+    // Try different ways to get food info
+    if (item['food'] is Map<String, dynamic>) {
+      final food = item['food'] as Map<String, dynamic>;
+      name = food['name']?.toString() ?? 'Unknown';
+      price = _asDouble(food['price'] ?? 0.0);
+      id = food['id']?.toString() ?? '';
+    } else {
+      // Fallback to direct fields
+      name =
+          item['name']?.toString() ?? item['foodName']?.toString() ?? 'Unknown';
+      price = _asDouble(item['price'] ?? item['foodPrice'] ?? 0.0);
+      id = item['id']?.toString() ?? '';
+    }
+
     return FoodOrder(
-      id: item['id']?.toString() ?? '',
-      name:
-          item['name']?.toString() ?? item['foodName']?.toString() ?? 'Unknown',
+      id: id,
+      name: name,
       quantity: _asInt(item['quantity']) ?? 1,
-      price: _asDouble(item['price'] ?? 0.0),
+      price: price,
     );
   }
 
   // Helper to convert List<dynamic> from dine-in API to List<FoodOrder>
   static List<FoodOrder> fromDineInItems(List<dynamic> items) {
     return items
-        .where((item) => item is Map<String, dynamic>)
-        .map((item) => FoodOrder.fromDineInItem(item as Map<String, dynamic>))
+        .whereType<Map<String, dynamic>>()
+        .map((item) => FoodOrder.fromDineInItem(item))
         .toList();
   }
 }

@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/auths/api_service.dart';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
+import 'package:fpt_final_project_mobile/auths/widgets/auth_scaffold.dart';
+import 'package:fpt_final_project_mobile/auths/widgets/otp_input_field.dart';
+import 'package:fpt_final_project_mobile/styles/app_theme.dart';
 import 'package:provider/provider.dart';
-import './styles/login_style.dart';
 
 class VerifyOtpPage extends StatefulWidget {
   const VerifyOtpPage({super.key});
@@ -15,7 +17,7 @@ class VerifyOtpPage extends StatefulWidget {
 
 class _VerifyOtpPageState extends State<VerifyOtpPage> {
   final _emailCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
+  String _otpCode = '';
 
   bool _loading = false;
   int _seconds = 60;
@@ -39,7 +41,6 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   void dispose() {
     _timer?.cancel();
     _emailCtrl.dispose();
-    _codeCtrl.dispose();
     super.dispose();
   }
 
@@ -63,10 +64,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
       final api = context.read<ApiService>();
       final auth = context.read<AuthProvider>();
 
-      final resp = await api.verifyOtp(
-        _emailCtrl.text.trim(),
-        _codeCtrl.text.trim(),
-      );
+      final resp = await api.verifyOtp(_emailCtrl.text.trim(), _otpCode.trim());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -131,134 +129,90 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   Widget build(BuildContext context) {
     final canResend = _seconds == 0;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Logo
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Image.asset(
-              'assets/images/Logo.png',
-              height: 100,
-              width: 100,
+    return AuthScaffold(
+      title: 'Admin Portal',
+      onBackPressed: () => Navigator.pop(context),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12), // Giảm từ 20 xuống 12
+            // Welcome text
+            const Text(
+              'Verify Your Account!',
+              style: TextStyle(
+                fontSize: 24, // Giảm từ 28 xuống 24
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
             ),
-          ),
-
-          // Main content
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Title
-                    const Text(
-                      'Verify OTP',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Verify form
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Email field
-                          const Text('Email', style: LoginStyle.textStyleLabel),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _emailCtrl,
-                            readOnly: true,
-                            decoration: LoginStyle.decorationInput,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // OTP field
-                          const Text(
-                            'OTP Code',
-                            style: LoginStyle.textStyleLabel,
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _codeCtrl,
-                            decoration: LoginStyle.decorationInput,
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Countdown + Resend
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    canResend
-                                        ? 'OTP can be resent'
-                                        : 'Resend after: $_seconds s',
-                                    style: const TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                FilledButton.tonal(
-                                  onPressed: canResend ? _resend : null,
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.refresh, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Resend OTP'),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Verify button
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              style: LoginStyle.buttonStyle,
-                              onPressed: _loading ? null : _verify,
-                              child: Text(
-                                _loading ? 'Verifying...' : 'Verify',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 6), // Giảm từ 8 xuống 6
+            const Text(
+              'Enter the verification code sent to your email',
+              style: TextStyle(
+                fontSize: 14, // Giảm từ 16 xuống 14
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 24), // Giảm từ 40 xuống 24
+            // Email field
+            AuthTextField(
+              controller: _emailCtrl,
+              label: 'Email',
+              hint: 'Your email address',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16), // Giảm từ 24 xuống 16
+            // OTP field
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Verification Code',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OtpInputField(
+                  onCompleted: (code) {
+                    setState(() {
+                      _otpCode = code;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8), // Giảm từ 16 xuống 8
+            // Resend OTP
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: canResend ? _resend : null,
+                child: Text(
+                  canResend ? 'Resend Code' : 'Resend in $_seconds seconds',
+                  style: TextStyle(
+                    color: canResend ? AppTheme.primary : AppTheme.textMedium,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13, // Thêm fontSize nhỏ hơn
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20), // Giảm từ 32 xuống 20
+            // Verify button
+            AuthButton(
+              text: 'Verify Code',
+              isLoading: _loading,
+              onPressed: _verify,
+            ),
+
+            const SizedBox(height: 20), // Giảm từ 40 xuống 20
+          ],
+        ),
       ),
     );
   }

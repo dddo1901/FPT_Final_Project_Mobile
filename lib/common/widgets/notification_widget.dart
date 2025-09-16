@@ -6,10 +6,10 @@ class NotificationWidget extends StatefulWidget {
   final VoidCallback onDismiss;
 
   const NotificationWidget({
-    Key? key,
+    super.key,
     required this.notification,
     required this.onDismiss,
-  }) : super(key: key);
+  });
 
   @override
   State<NotificationWidget> createState() => _NotificationWidgetState();

@@ -19,7 +19,7 @@ class FoodModel {
     this.imageUrl,
   });
 
-  String get priceText => '\$${(price / 25000).toStringAsFixed(2)}';
+  String get priceText => '\$${price.toStringAsFixed(2)}';
   bool get isAvailable => status == 'AVAILABLE';
 
   factory FoodModel.fromEntity(FoodEntity e, {required String baseUrl}) {

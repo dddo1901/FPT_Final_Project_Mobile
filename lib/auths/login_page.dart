@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/auths/api_service.dart';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
 import 'package:fpt_final_project_mobile/auths/jwt_claims.dart';
+import 'package:fpt_final_project_mobile/auths/widgets/auth_scaffold.dart';
+import 'package:fpt_final_project_mobile/styles/app_theme.dart';
 import 'package:provider/provider.dart';
-import './styles/login_style.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -56,137 +57,78 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Animated background using GIF
-          // Positioned.fill(
-          //   child: Image.asset(
-          //     'assets/images/login-background.gif',
-          //     fit: BoxFit.cover,
-          //     // Add color filter to darken the background if needed
-          //     color: Colors.black.withOpacity(0.2),
-          //     colorBlendMode: BlendMode.darken,
-          //   ),
-          // ),
-
-          // Logo
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Image.asset(
-              'assets/images/Logo.png',
-              height: 100,
-              width: 100,
+    return AuthScaffold(
+      title: 'Admin Portal',
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12), // Giảm từ 20 xuống 12
+            // Welcome text
+            const Text(
+              'Welcome Back!',
+              style: TextStyle(
+                fontSize: 24, // Giảm từ 28 xuống 24
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
             ),
-          ),
-
-          // Main content
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Title
-                    const Text(
-                      'Log in',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Login form
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Username field
-                          const Text(
-                            'Username',
-                            style: LoginStyle.textStyleLabel,
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _userCtrl,
-                            decoration: LoginStyle.decorationInput,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Password field
-                          const Text(
-                            'Password',
-                            style: LoginStyle.textStyleLabel,
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _passCtrl,
-                            obscureText: !_showPassword,
-                            decoration: LoginStyle.decorationInput.copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _showPassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _showPassword = !_showPassword;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Forgot password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                // Handle forgot password
-                              },
-                              child: const Text(
-                                'Forgot Password?',
-                                style: TextStyle(color: Color(0xFF3B82F6)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Login button
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              style: LoginStyle.buttonStyle,
-                              onPressed: _loading ? null : _login,
-                              child: Text(
-                                _loading ? 'Logging in...' : 'Next',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // User type toggle
-                        ],
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 6), // Giảm từ 8 xuống 6
+            const Text(
+              'Sign in to continue to your account',
+              style: TextStyle(
+                fontSize: 14, // Giảm từ 16 xuống 14
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 24), // Giảm từ 40 xuống 24
+            // Username field
+            AuthTextField(
+              controller: _userCtrl,
+              label: 'Username',
+              hint: 'Enter your username',
+              icon: Icons.person_outline,
+            ),
+            const SizedBox(height: 16), // Giảm từ 24 xuống 16
+            // Password field
+            AuthTextField(
+              controller: _passCtrl,
+              label: 'Password',
+              hint: 'Enter your password',
+              icon: Icons.lock_outline,
+              isPassword: true,
+              showPassword: _showPassword,
+              onTogglePassword: () {
+                setState(() {
+                  _showPassword = !_showPassword;
+                });
+              },
+            ),
+            const SizedBox(height: 8), // Giảm từ 16 xuống 8
+            // Forgot password
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/verify-otp');
+                },
+                child: const Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13, // Thêm fontSize nhỏ hơn
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20), // Giảm từ 32 xuống 20
+            // Login button
+            AuthButton(text: 'Sign In', isLoading: _loading, onPressed: _login),
+
+            const SizedBox(height: 20), // Giảm từ 40 xuống 20
+          ],
+        ),
       ),
     );
   }

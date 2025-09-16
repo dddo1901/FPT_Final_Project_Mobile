@@ -3,6 +3,7 @@ import 'package:fpt_final_project_mobile/widgets/ui_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:fpt_final_project_mobile/auths/auth_provider.dart';
 import 'package:fpt_final_project_mobile/models/claims.dart';
+import '../../styles/app_theme.dart';
 
 class StaffHome extends StatelessWidget {
   final String userId; // staff hiện tại
@@ -23,16 +24,70 @@ class StaffHome extends StatelessWidget {
     final role = (claims.role ?? 'STAFF').toUpperCase();
 
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        title: const Text('Staff Dashboard'),
+        title: const Text(
+          'Staff Dashboard',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
+          // Notification Icon
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    _go(context, '/staff/requests');
+                  },
+                ),
+                // Badge for notification count
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: const Text(
+                      '2', // TODO: Replace with actual count
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Profile Avatar
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, '/staff/profile'),
             child: Padding(
               padding: const EdgeInsets.only(right: 12),
               child: CircleAvatar(
                 radius: 16,
-                child: Text(_initials(displayName ?? 'Unknown')),
+                backgroundColor: Colors.white,
+                child: Text(
+                  _initials(displayName ?? 'Unknown'),
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ),
@@ -47,42 +102,53 @@ class StaffHome extends StatelessWidget {
         userId: userId,
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: cross,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          children: [
-            _StaffCard(
-              icon: Icons.table_restaurant,
-              title: 'Tables',
-              subtitle: 'List & detail',
-              color: Colors.teal,
-              onTap: () => _go(context, '/staff/tables'),
-            ),
-            _StaffCard(
-              icon: Icons.fastfood,
-              title: 'Foods',
-              subtitle: 'Menu & status',
-              color: Colors.orange,
-              onTap: () => _go(context, '/staff/foods'),
-            ),
-            _StaffCard(
-              icon: Icons.receipt_long,
-              title: 'Orders',
-              subtitle: 'Incoming & history',
-              color: Colors.purple,
-              onTap: () => _go(context, '/staff/orders'),
-            ),
-            _StaffCard(
-              icon: Icons.assignment,
-              title: 'Requests',
-              subtitle: 'Leave, swap & overtime',
-              color: Colors.deepOrange,
-              onTap: () => _go(context, '/staff/requests'),
-            ),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.count(
+            crossAxisCount: cross,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.1, // Tỷ lệ để tránh overflow
+            children: [
+              _StaffCard(
+                icon: Icons.table_restaurant,
+                title: 'Tables',
+                subtitle: 'List & detail',
+                color: AppTheme.info,
+                onTap: () => _go(context, '/staff/tables'),
+              ),
+              _StaffCard(
+                icon: Icons.fastfood,
+                title: 'Foods',
+                subtitle: 'Menu & status',
+                color: AppTheme.warning,
+                onTap: () => _go(context, '/staff/foods'),
+              ),
+              _StaffCard(
+                icon: Icons.receipt_long,
+                title: 'Orders',
+                subtitle: 'Incoming & history',
+                color: AppTheme.primary,
+                onTap: () => _go(context, '/staff/orders'),
+              ),
+              _StaffCard(
+                icon: Icons.assignment,
+                title: 'Requests',
+                subtitle: 'Leave, swap & overtime',
+                color: AppTheme.success,
+                onTap: () => _go(context, '/staff/requests'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -113,6 +179,7 @@ class _StaffDrawer extends StatelessWidget {
           children: [
             UserAccountsDrawerHeader(
               currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
                 backgroundImage:
                     (avatarUrl != null && avatarUrl!.startsWith('http'))
                     ? NetworkImage(avatarUrl!)
@@ -123,13 +190,19 @@ class _StaffDrawer extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
                         ),
                       )
                     : null,
               ),
-              accountName: Text(displayName),
+              accountName: Text(
+                displayName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               accountEmail: Text(role),
-              decoration: const BoxDecoration(color: Colors.indigo),
+              decoration: const BoxDecoration(
+                gradient: AppTheme.cardHeaderGradient,
+              ),
               onDetailsPressed: () =>
                   Navigator.pushNamed(context, '/staff/profile'),
             ),
@@ -202,42 +275,74 @@ class _StaffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = color.withValues(alpha: 0.12);
-    final fg = color;
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // Giảm từ 20 xuống 12
         decoration: BoxDecoration(
-          color: bg,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: fg.withValues(alpha: 0.25)),
+          boxShadow: AppTheme.softShadow,
+          border: Border.all(color: color.withOpacity(0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Thêm để tránh overflow
           children: [
-            Icon(icon, size: 36, color: fg),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: fg,
+            Container(
+              width: 32, // Giảm từ 48 xuống 32
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8), // Giảm từ 12 xuống 8
+                border: Border.all(color: color.withOpacity(0.2)),
+              ),
+              child: Icon(icon, size: 18, color: color), // Giảm từ 24 xuống 18
+            ),
+            const SizedBox(height: 8), // Giảm từ 16 xuống 8
+            Flexible(
+              // Thay đổi Text thành Flexible
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14, // Giảm từ 18 xuống 14
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textDark,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.black87),
+            const SizedBox(height: 2), // Giảm từ 4 xuống 2
+            Flexible(
+              // Thay đổi Text thành Flexible
+              child: Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12, // Giảm từ 14 xuống 12
+                  color: AppTheme.textMedium,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const Spacer(),
+            const SizedBox(height: 8), // Thay Spacer bằng SizedBox cố định
             Align(
               alignment: Alignment.bottomRight,
-              child: Icon(Icons.arrow_forward_ios, size: 16, color: fg),
+              child: Container(
+                width: 24, // Giảm từ 32 xuống 24
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6), // Giảm từ 8 xuống 6
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12, // Giảm từ 16 xuống 12
+                  color: color,
+                ),
+              ),
             ),
           ],
         ),

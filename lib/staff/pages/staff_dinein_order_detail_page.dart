@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../auths/api_service.dart';
 import '../../admin/entities/order_entity.dart';
 import '../../admin/models/order_model.dart';
+import '../../styles/app_theme.dart';
 
 /// Detailed page for Dine-In orders (no delivery section, with fallback items fetch)
 class StaffDineInOrderDetailPage extends StatefulWidget {
@@ -92,72 +93,240 @@ class _StaffDineInOrderDetailPageState
   void _reload() => setState(() => _future = _fetch());
   String _fmtDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year} ${d.hour}:${d.minute.toString().padLeft(2, '0')}';
-  String _fmtMoney(num v) => '\$${(v / 25000).toStringAsFixed(2)}';
+  String _fmtMoney(num v) => '\$${v.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.ultraLightBlue,
       appBar: AppBar(
-        title: const Text('Dine-In Order'),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Dine-In Order',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
         actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          ),
         ],
+        elevation: 0,
       ),
       body: FutureBuilder<OrderModel>(
         future: _future,
         builder: (_, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
-          final o = snap.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Order #${o.orderNumber}',
-                style: Theme.of(context).textTheme.titleLarge,
+            return Container(
+              decoration: BoxDecoration(gradient: AppTheme.bgGradient),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
               ),
-              const SizedBox(height: 8),
-              _kv('Status', o.status),
-              _kv('Created', _fmtDate(o.createdAt)),
-              _kv('Total', _fmtMoney(o.totalPrice)),
-              const Divider(height: 32),
-              Text('Customer', style: Theme.of(context).textTheme.titleMedium),
-              _kv('Name', o.customer?.fullName ?? '—'),
-              _kv('Email', o.customer?.email ?? '—'),
-              const Divider(height: 32),
-              Text('Items', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (o.foodList.isEmpty)
-                const Text(
-                  'No items (fallback empty)',
-                  style: TextStyle(color: Colors.grey),
-                )
-              else ...[
-                ...o.foodList.map(
-                  (f) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      f.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text('x${f.quantity}'),
-                    trailing: Text(_fmtMoney(f.price * f.quantity)),
+            );
+          }
+          if (snap.hasError) {
+            return Container(
+              decoration: BoxDecoration(gradient: AppTheme.bgGradient),
+              child: Center(
+                child: Text(
+                  'Error: ${snap.error}',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            );
+          }
+          final o = snap.data!;
+          return Container(
+            decoration: BoxDecoration(gradient: AppTheme.bgGradient),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Order Header Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${o.orderNumber}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _statusChip(o.status),
+                    ],
                   ),
                 ),
-                const Divider(height: 24),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Subtotal: ${_fmtMoney(o.foodList.fold<num>(0, (s, f) => s + f.price * f.quantity))}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                const SizedBox(height: 16),
+                // Order Details Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Order Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _kv('Created', _fmtDate(o.createdAt)),
+                      _kv('Total', _fmtMoney(o.totalPrice)),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Customer Info Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Customer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _kv('Name', o.customer?.fullName ?? '—'),
+                      _kv('Email', o.customer?.email ?? '—'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Items Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Order Items',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (o.foodList.isEmpty)
+                        const Text(
+                          'No items (fallback empty)',
+                          style: TextStyle(color: AppTheme.textLight),
+                        )
+                      else ...[
+                        ...o.foodList.map(
+                          (f) => Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.ultraLightBlue,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        f.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.textDark,
+                                        ),
+                                      ),
+                                      Text(
+                                        'x${f.quantity}',
+                                        style: const TextStyle(
+                                          color: AppTheme.textMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  _fmtMoney(f.price * f.quantity),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Subtotal:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textDark,
+                                ),
+                              ),
+                              Text(
+                                _fmtMoney(
+                                  o.foodList.fold<num>(
+                                    0,
+                                    (s, f) => s + f.price * f.quantity,
+                                  ),
+                                ),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
               ],
-              const SizedBox(height: 40),
-            ],
+            ),
           );
         },
       ),
@@ -165,15 +334,67 @@ class _StaffDineInOrderDetailPageState
   }
 
   Widget _kv(String k, String v) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 110,
-          child: Text(k, style: const TextStyle(fontWeight: FontWeight.w600)),
+          width: 100,
+          child: Text(
+            k,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMedium,
+            ),
+          ),
         ),
-        Expanded(child: Text(v)),
+        Expanded(
+          child: Text(v, style: const TextStyle(color: AppTheme.textDark)),
+        ),
       ],
     ),
   );
+
+  Widget _statusChip(String status) {
+    Color chipColor;
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        chipColor = AppTheme.warning;
+        break;
+      case 'CONFIRMED':
+        chipColor = AppTheme.info;
+        break;
+      case 'PREPARING':
+        chipColor = AppTheme.primary;
+        break;
+      case 'READY':
+        chipColor = AppTheme.accentBlue;
+        break;
+      case 'DELIVERED':
+        chipColor = AppTheme.success;
+        break;
+      case 'CANCELLED':
+        chipColor = AppTheme.danger;
+        break;
+      default:
+        chipColor = AppTheme.textMedium;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: chipColor.withOpacity(0.3)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: chipColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
 }

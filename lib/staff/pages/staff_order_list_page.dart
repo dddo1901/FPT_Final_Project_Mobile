@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../../admin/models/order_model.dart';
 import '../../admin/entities/order_entity.dart';
 import '../../auths/api_service.dart';
+import '../../styles/app_theme.dart';
 
 class StaffOrderListPage extends StatefulWidget {
   const StaffOrderListPage({super.key});
@@ -42,7 +43,7 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
 
   Future<OrderModel> _enhanceOrderWithFallback(OrderModel order) async {
     // Only enhance dine-in orders with empty foodList
-    if (!_isDineIn(order) || order.foodList.isNotEmpty) {
+    if (order.foodList.isNotEmpty) {
       return order;
     }
 
@@ -66,14 +67,20 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
         final body = res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
         if (body.isNotEmpty) {
           final data = jsonDecode(body);
-          if (data is Map<String, dynamic> && data.containsKey('orderItems')) {
-            final orderItems = data['orderItems'] as List<dynamic>? ?? [];
+          if (data is Map<String, dynamic> &&
+              (data.containsKey('foodList') ||
+                  data.containsKey('orderItems'))) {
+            // Try both foodList and orderItems since dine-in has different structure
+            final itemsList =
+                (data['foodList'] as List<dynamic>?) ??
+                (data['orderItems'] as List<dynamic>?) ??
+                [];
             debugPrint(
-              '[FALLBACK] Found ${orderItems.length} items for order ${order.orderNumber}',
+              '[FALLBACK] Found ${itemsList.length} items for order ${order.orderNumber}',
             );
 
             // Convert to FoodOrder list
-            final foodOrders = FoodOrder.fromDineInItems(orderItems);
+            final foodOrders = FoodOrder.fromDineInItems(itemsList);
 
             // Cache the items
             _dineInItemsCache[order.id] = foodOrders;
@@ -95,20 +102,35 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
   Future<List<OrderModel>> _fetchDineInOrders() async {
     final api = context.read<ApiService>();
     try {
-      final res = await api.client.get(Uri.parse('${api.baseUrl}/api/orders'));
+      final res = await api.client.get(
+        Uri.parse('${api.baseUrl}/api/dinein/orders/all'),
+      );
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final body = res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
         if (body.isNotEmpty) {
-          debugPrint('[STAFF DINE-IN ORDERS] $body');
+          debugPrint(
+            '[STAFF DINE-IN ORDERS] Raw response length: ${body.length}',
+          );
           final data = jsonDecode(body);
+          debugPrint(
+            '[STAFF DINE-IN ORDERS] Parsed data type: ${data.runtimeType}',
+          );
           if (data is List) {
+            debugPrint('[STAFF DINE-IN ORDERS] List length: ${data.length}');
             final entities = OrderEntity.listFromJson(data);
             final allOrders = entities.map(OrderModel.fromEntity).toList();
 
-            // Filter for dine-in orders only
-            final dineInOrders = allOrders
-                .where((order) => _isDineIn(order))
-                .toList();
+            // Filter for dine-in orders by orderNumber prefix "DIN"
+            final dineInOrders = allOrders.where((order) {
+              return order.orderNumber.toUpperCase().startsWith('DIN');
+            }).toList();
+
+            // Sort by createdAt descending (newest first)
+            dineInOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+            debugPrint(
+              '[STAFF DINE-IN ORDERS] Filtered ${dineInOrders.length} dine-in orders from ${allOrders.length} total',
+            );
 
             // Enhance with fallback items for empty foodList
             final enhancedOrders = <OrderModel>[];
@@ -128,8 +150,9 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
           '[STAFF DINE-IN ORDERS] HTTP ${res.statusCode}: ${res.body}',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[STAFF DINE-IN ORDERS FETCH ERROR] $e');
+      debugPrint('[STAFF DINE-IN ORDERS STACK] $stackTrace');
     }
     return [];
   }
@@ -137,20 +160,33 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
   Future<List<OrderModel>> _fetchTakeAwayOrders() async {
     final api = context.read<ApiService>();
     try {
-      final res = await api.client.get(Uri.parse('${api.baseUrl}/api/orders'));
+      final res = await api.client.get(
+        Uri.parse('${api.baseUrl}/api/orders'), // Lấy tất cả orders
+      );
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final body = res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
         if (body.isNotEmpty) {
-          debugPrint('[STAFF TAKE-AWAY ORDERS] $body');
+          debugPrint(
+            '[STAFF TAKE-AWAY ORDERS] Raw response length: ${body.length}',
+          );
           final data = jsonDecode(body);
+          debugPrint(
+            '[STAFF TAKE-AWAY ORDERS] Parsed data type: ${data.runtimeType}',
+          );
           if (data is List) {
+            debugPrint('[STAFF TAKE-AWAY ORDERS] List length: ${data.length}');
             final entities = OrderEntity.listFromJson(data);
             final allOrders = entities.map(OrderModel.fromEntity).toList();
 
-            // Filter for take-away orders only (not delivery, not dine-in)
-            final takeAwayOrders = allOrders
-                .where((order) => _isTakeAway(order) && !_isDelivery(order))
-                .toList();
+            // Filter for take-away orders by orderNumber prefix "TA"
+            final takeAwayOrders = allOrders.where((order) {
+              final orderNum = order.orderNumber.toUpperCase();
+              return orderNum.startsWith('TA');
+            }).toList();
+
+            // Sort by createdAt descending (newest first)
+            takeAwayOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
             debugPrint(
               '[STAFF TAKE-AWAY ORDERS] Filtered ${takeAwayOrders.length} take-away orders from ${allOrders.length} total',
             );
@@ -162,8 +198,9 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
           '[STAFF TAKE-AWAY ORDERS] HTTP ${res.statusCode}: ${res.body}',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[STAFF TAKE-AWAY ORDERS FETCH ERROR] $e');
+      debugPrint('[STAFF TAKE-AWAY ORDERS STACK] $stackTrace');
     }
     return [];
   }
@@ -176,14 +213,33 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final body = res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
         if (body.isNotEmpty) {
-          debugPrint('[STAFF DELIVERY ORDERS RAW] $body');
+          debugPrint(
+            '[STAFF DELIVERY ORDERS] Raw response length: ${body.length}',
+          );
           final data = jsonDecode(body);
+          debugPrint(
+            '[STAFF DELIVERY ORDERS] Parsed data type: ${data.runtimeType}',
+          );
           if (data is List) {
+            debugPrint('[STAFF DELIVERY ORDERS] List length: ${data.length}');
             final entities = OrderEntity.listFromJson(data);
             final allOrders = entities.map(OrderModel.fromEntity).toList();
 
-            // Filter delivery orders using heuristics
-            final deliveryOrders = allOrders.where(_isDelivery).toList();
+            // Filter delivery orders by orderNumber prefix "DEL" or deliveryAddress presence
+            final deliveryOrders = allOrders.where((order) {
+              final orderNum = order.orderNumber.toUpperCase();
+              final hasDeliveryAddr =
+                  order.deliveryAddress != null &&
+                  order.deliveryAddress!.trim().isNotEmpty;
+
+              return orderNum.startsWith('DEL') ||
+                  orderNum.startsWith('DELIVERY') ||
+                  hasDeliveryAddr;
+            }).toList();
+
+            // Sort by createdAt descending (newest first)
+            deliveryOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
             debugPrint(
               '[STAFF DELIVERY ORDERS] Filtered ${deliveryOrders.length} delivery orders from ${allOrders.length} total',
             );
@@ -195,8 +251,9 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
           '[STAFF DELIVERY ORDERS] HTTP ${res.statusCode}: ${res.body}',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[STAFF DELIVERY ORDERS FETCH ERROR] $e');
+      debugPrint('[STAFF DELIVERY ORDERS STACK] $stackTrace');
     }
     return [];
   }
@@ -224,71 +281,6 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
 
     debugPrint('[STAFF ORDERS] Fetched ${orders.length} orders for type $type');
     return orders;
-  }
-
-  bool _isDelivery(OrderModel o) {
-    final hasAddr =
-        o.deliveryAddress != null && o.deliveryAddress!.trim().isNotEmpty;
-    final hasDeliveryStatus =
-        o.deliveryStatus != null && o.deliveryStatus!.trim().isNotEmpty;
-    final hasRecipient =
-        (o.recipientName != null && o.recipientName!.trim().isNotEmpty) ||
-        (o.recipientPhone != null && o.recipientPhone!.trim().isNotEmpty);
-    final status = o.status.toUpperCase();
-    final shippingKeyword =
-        status.contains('SHIP') ||
-        status.contains('DELIVER') ||
-        status.contains('COURIER');
-
-    // Check for delivery prefix in order number
-    final number = o.orderNumber.toUpperCase();
-    final hasDeliveryPrefix =
-        number.startsWith('DEL') || number.startsWith('DL');
-
-    // Treat as delivery if any delivery markers are present, excluding explicit take-away/dine-in prefixes
-    final isDelivery =
-        hasAddr ||
-        hasDeliveryStatus ||
-        hasRecipient ||
-        shippingKeyword ||
-        hasDeliveryPrefix;
-    final isExplicitlyNotDelivery =
-        number.startsWith('TA') ||
-        number.startsWith('DIN') ||
-        number.startsWith('DI');
-
-    return isDelivery && !isExplicitlyNotDelivery;
-  }
-
-  bool _isTakeAway(OrderModel o) {
-    final s = o.status.toUpperCase();
-    final number = o.orderNumber.toUpperCase();
-    if (_isDelivery(o)) return false;
-    // Prefer explicit prefix or status keywords for take-away recognition
-    if (number.startsWith('TA')) return true;
-    return s.contains('TAKE') || s.contains('AWAY');
-  }
-
-  bool _isDineIn(OrderModel o) {
-    if (_isDelivery(o) || _isTakeAway(o)) return false;
-    // Require an internal dine-in style order number prefix if available
-    final number = o.orderNumber.toUpperCase();
-    final looksLikeDineInNumber =
-        number.startsWith('DIN') || number.startsWith('DI');
-    final noAddr =
-        o.deliveryAddress == null || o.deliveryAddress!.trim().isEmpty;
-    final noRecipient =
-        (o.recipientName == null || o.recipientName!.trim().isEmpty) &&
-        (o.recipientPhone == null || o.recipientPhone!.trim().isEmpty);
-
-    // STRICT: Only accept orders with explicit DIN prefix OR very clear dine-in markers
-    if (looksLikeDineInNumber && noAddr) return true;
-
-    // Only fallback to no-address check if status suggests in-house dining
-    final status = o.status.toUpperCase();
-    final hasDineInStatus = status.contains('DINE') || status.contains('TABLE');
-
-    return noAddr && noRecipient && hasDineInStatus;
   }
 
   List<String> _getStatusOptions(String orderType) {
@@ -382,19 +374,20 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
   Color _statusColor(String status) {
     switch (status.toUpperCase()) {
       case 'PENDING':
-        return Colors.orange.shade700;
+        return AppTheme.warning;
       case 'CONFIRMED':
-        return Colors.blue.shade700;
+        return AppTheme.info;
       case 'PREPARING':
-        return Colors.purple.shade700;
+        return AppTheme.primary;
       case 'READY':
-        return Colors.green.shade700;
+        return AppTheme.success;
       case 'COMPLETED':
-        return Colors.grey.shade700;
+      case 'DELIVERED':
+        return AppTheme.success;
       case 'CANCELLED':
-        return Colors.red.shade700;
+        return AppTheme.danger;
       default:
-        return Colors.grey.shade600;
+        return AppTheme.textMedium;
     }
   }
 
@@ -420,17 +413,28 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        title: const Text('Orders (Staff)'),
+        title: const Text(
+          'Orders (Staff)',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Reload & Reclassify',
             onPressed: _forceReload,
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.restaurant), text: 'Dine-In'),
             Tab(icon: Icon(Icons.shopping_bag), text: 'Take-Away'),
@@ -438,58 +442,107 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    hintText: 'Search orders...',
-                  ),
-                  onChanged: (v) => setState(() => _search = v.trim()),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('Status: '),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DropdownButton<String>(
-                        value: _statusFilter,
-                        isExpanded: true,
-                        items: _getCurrentStatusOptions().map((status) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(status),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() {
-                          _statusFilter = value!;
-                          _cache
-                              .clear(); // Clear cache to refresh with new filter
-                        }),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppTheme.primary,
                       ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppTheme.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: AppTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                      hintText: 'Search orders...',
+                      hintStyle: const TextStyle(color: AppTheme.textMedium),
                     ),
-                  ],
-                ),
-              ],
+                    onChanged: (v) => setState(() => _search = v.trim()),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text(
+                        'Status: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: AppTheme.primary.withOpacity(0.3),
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _statusFilter,
+                            isExpanded: true,
+                            underline: const SizedBox(),
+                            style: const TextStyle(color: AppTheme.textDark),
+                            items: _getCurrentStatusOptions().map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Text(status),
+                              );
+                            }).toList(),
+                            onChanged: (value) => setState(() {
+                              _statusFilter = value!;
+                              _cache
+                                  .clear(); // Clear cache to refresh with new filter
+                            }),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildOrderList('DINE_IN'),
-                _buildOrderList('TAKE_AWAY'),
-                _buildOrderList('DELIVERY'),
-              ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOrderList('DINE_IN'),
+                  _buildOrderList('TAKE_AWAY'),
+                  _buildOrderList('DELIVERY'),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -516,97 +569,181 @@ class _StaffOrderListPageState extends State<StaffOrderListPage>
               order.id.toLowerCase().contains(s);
         }).toList();
         if (list.isEmpty) {
-          return const Center(child: Text('No orders'));
+          return Center(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: AppTheme.textMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No orders found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
         return RefreshIndicator(
+          color: AppTheme.primary,
           onRefresh: () async => _forceReload(),
           child: ListView.separated(
+            padding: const EdgeInsets.all(16),
             itemCount: list.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (_, i) {
               final order = list[i];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.purple.shade100,
-                    child: Icon(
-                      Icons.receipt_long,
-                      color: Colors.purple.shade700,
-                    ),
-                  ),
-                  title: Text(
-                    'Order #${order.orderNumber}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        'Created: ${_formatDate(order.createdAt)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Total: \$${(order.totalPrice / 25000).toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (order.foodList.isEmpty)
-                        Text(
-                          'Server returned empty foodList',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.red.shade400,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                    ],
-                  ),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _statusColor(order.status).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _statusColor(order.status),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: AppTheme.softShadow,
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _goDetail(order.id),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          _statusIcon(order.status),
-                          size: 14,
-                          color: _statusColor(order.status),
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.cardHeaderGradient,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Order #${order.orderNumber}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatDate(order.createdAt),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _statusColor(
+                                  order.status,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _statusColor(
+                                    order.status,
+                                  ).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _statusIcon(order.status),
+                                    size: 14,
+                                    color: _statusColor(order.status),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    order.status.toUpperCase(),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: _statusColor(order.status),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          order.status.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: _statusColor(order.status),
-                            fontSize: 12,
-                          ),
+                        const SizedBox(height: 12),
+                        Divider(color: AppTheme.divider, height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.attach_money,
+                              color: AppTheme.success,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Total: \$${order.totalPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.success,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (order.foodList.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warning.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Empty food list',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.warning,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  onTap: () => _goDetail(order.id),
                 ),
               );
             },

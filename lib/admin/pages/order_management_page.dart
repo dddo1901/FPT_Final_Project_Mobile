@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../models/order_model.dart';
 import '../entities/order_entity.dart';
 import '../../auths/api_service.dart';
+import '../../styles/app_theme.dart';
 import 'order_detail_page.dart';
 
 class OrderManagementPage extends StatefulWidget {
@@ -32,10 +33,22 @@ class _OrderManagementPageState extends State<OrderManagementPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        title: const Text('Order Management'),
+        title: const Text(
+          'Order Management',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(icon: Icon(Icons.restaurant), text: 'Dine-In'),
             Tab(icon: Icon(Icons.shopping_bag), text: 'Take-Away'),
@@ -43,25 +56,35 @@ class _OrderManagementPageState extends State<OrderManagementPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          const OrderTypeTab(
-            orderType: 'DINE_IN',
-            title: 'Dine-In Orders',
-            emptyMessage: 'No dine-in orders found',
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.ultraLightBlue, AppTheme.surface],
+            stops: [0.0, 0.3],
           ),
-          const OrderTypeTab(
-            orderType: 'TAKE_AWAY',
-            title: 'Take-Away Orders',
-            emptyMessage: 'No take-away orders found',
-          ),
-          const OrderTypeTab(
-            orderType: 'DELIVERY',
-            title: 'Delivery Orders',
-            emptyMessage: 'No delivery orders found',
-          ),
-        ],
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            const OrderTypeTab(
+              orderType: 'DINE_IN',
+              title: 'Dine-In Orders',
+              emptyMessage: 'No dine-in orders found',
+            ),
+            const OrderTypeTab(
+              orderType: 'TAKE_AWAY',
+              title: 'Take-Away Orders',
+              emptyMessage: 'No take-away orders found',
+            ),
+            const OrderTypeTab(
+              orderType: 'DELIVERY',
+              title: 'Delivery Orders',
+              emptyMessage: 'No delivery orders found',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -113,7 +136,8 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
           endpoint = '/api/admin/orders/take-away';
           break;
         case 'DELIVERY':
-          endpoint = '/api/orders/filter?type=DELIVERY';
+          endpoint =
+              '/api/orders'; // Sử dụng endpoint chung và filter ở frontend
           break;
         default:
           endpoint = '/api/admin/orders';
@@ -124,18 +148,44 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final body = res.bodyBytes.isNotEmpty ? utf8.decode(res.bodyBytes) : '';
         if (body.isNotEmpty) {
+          debugPrint('[$type ORDERS] Raw response: $body');
           final data = jsonDecode(body);
+          debugPrint('[$type ORDERS] Parsed data type: ${data.runtimeType}');
           if (data is List) {
+            debugPrint('[$type ORDERS] List length: ${data.length}');
             entities = OrderEntity.listFromJson(data);
+          } else {
+            debugPrint('[$type ORDERS] Data is not List: $data');
           }
         }
       } else {
         throw Exception('HTTP ${res.statusCode}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error fetching $type orders: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
-    return entities.map(OrderModel.fromEntity).toList();
+
+    // Convert to models and filter by orderType for DELIVERY
+    var orders = entities.map(OrderModel.fromEntity).toList();
+
+    // Filter by orderType if it's DELIVERY
+    if (type == 'DELIVERY') {
+      orders = orders.where((order) {
+        // Ưu tiên filter theo orderType nếu có
+        if (order.orderType != null) {
+          return order.orderType == 'DELIVERY';
+        }
+        // Nếu không có orderType, filter theo orderNumber (loại bỏ TA và DIN)
+        final orderNum = order.orderNumber.toUpperCase();
+        return !orderNum.contains('TA') && !orderNum.contains('DIN');
+      }).toList();
+    }
+
+    // Sort by createdAt descending (newest first)
+    orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return orders;
   }
 
   List<OrderModel> _filterOrders(List<OrderModel> orders) {
@@ -163,6 +213,9 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
         }
       }).toList();
     }
+
+    // Đảm bảo sắp xếp theo thời gian mới nhất sau khi filter
+    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return filtered;
   }
@@ -199,24 +252,38 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'PENDING':
-        return Colors.orange;
+        return AppTheme.warning;
       case 'CONFIRMED':
       case 'PAID':
-        return Colors.green;
+        return AppTheme.success;
       case 'PREPARING':
-        return Colors.blue;
+        return AppTheme.info;
       case 'READY':
-        return Colors.purple;
+        return AppTheme.primary;
       case 'COMPLETED':
-        return Colors.green.shade700;
+      case 'DELIVERED':
+        return AppTheme.success;
       case 'CANCELLED':
-        return Colors.red;
+        return AppTheme.danger;
       case 'WAITING_FOR_SHIPPER':
-        return Colors.amber;
+        return AppTheme.warning;
       case 'DELIVERING':
-        return Colors.blue.shade700;
+        return AppTheme.info;
       default:
-        return Colors.grey;
+        return AppTheme.textMedium;
+    }
+  }
+
+  IconData _getOrderIcon(String orderType) {
+    switch (orderType) {
+      case 'DINE_IN':
+        return Icons.restaurant;
+      case 'TAKE_AWAY':
+        return Icons.shopping_bag;
+      case 'DELIVERY':
+        return Icons.delivery_dining;
+      default:
+        return Icons.receipt;
     }
   }
 
@@ -226,39 +293,84 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
       children: [
         // Search and Filter
         Container(
+          margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: AppTheme.softShadow,
+          ),
           child: Column(
             children: [
               TextField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Search orders...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(color: AppTheme.textLight),
+                  prefixIcon: Icon(Icons.search, color: AppTheme.primary),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppTheme.divider),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 onChanged: (value) => setState(() => _search = value),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('Status: '),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButton<String>(
-                      value: _statusFilter,
-                      isExpanded: true,
-                      items: _getStatusOptions().map((status) {
-                        return DropdownMenuItem(
-                          value: status,
-                          child: Text(status),
-                        );
-                      }).toList(),
-                      onChanged: (value) =>
-                          setState(() => _statusFilter = value!),
+                  Text(
+                    'Status: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _fetchOrders,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.divider),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _statusFilter,
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        items: _getStatusOptions().map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(
+                              status,
+                              style: TextStyle(color: AppTheme.textDark),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) =>
+                            setState(() => _statusFilter = value!),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      onPressed: _fetchOrders,
+                    ),
                   ),
                 ],
               ),
@@ -271,7 +383,11 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
             future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  ),
+                );
               }
 
               if (snapshot.hasError) {
@@ -279,12 +395,24 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error, size: 64, color: Colors.red[300]),
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppTheme.danger,
+                      ),
                       const SizedBox(height: 16),
-                      Text('Error: ${snapshot.error}'),
+                      Text(
+                        'Error: ${snapshot.error}',
+                        style: TextStyle(color: AppTheme.danger),
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _fetchOrders,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -299,13 +427,21 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 64,
+                        color: AppTheme.textLight,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         _search.isNotEmpty || _statusFilter != 'ALL'
                             ? 'No orders match your filters'
                             : widget.emptyMessage,
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(
+                          color: AppTheme.textMedium,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -313,9 +449,10 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
               }
 
               return RefreshIndicator(
+                color: AppTheme.primary,
                 onRefresh: () async => _fetchOrders(),
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: orders.length,
                   itemBuilder: (context, index) {
                     final order = orders[index];
@@ -323,28 +460,45 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
                         ? order.deliveryStatus
                         : order.status;
 
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: AppTheme.softShadow,
+                      ),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getStatusColor(displayStatus ?? ''),
-                          child: Text(
-                            order.orderNumber.substring(0, 2).toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(displayStatus ?? ''),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            _getOrderIcon(widget.orderType),
+                            color: Colors.white,
+                            size: 24,
                           ),
                         ),
                         title: Text(
                           'Order #${order.orderNumber}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textDark,
+                          ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            const SizedBox(height: 8),
                             if (order.customer?.fullName != null)
-                              Text('Customer: ${order.customer!.fullName}'),
+                              Text(
+                                'Customer: ${order.customer!.fullName}',
+                                style: TextStyle(color: AppTheme.textMedium),
+                              ),
+                            const SizedBox(height: 8),
                             Row(
                               children: [
                                 Container(
@@ -353,15 +507,19 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _getStatusColor(displayStatus ?? ''),
+                                    color: _getStatusColor(
+                                      displayStatus ?? '',
+                                    ).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     displayStatus ?? 'Unknown',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: _getStatusColor(
+                                        displayStatus ?? '',
+                                      ),
                                       fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -369,13 +527,19 @@ class _OrderTypeTabState extends State<OrderTypeTab> {
                                 Text(
                                   '\$${order.totalPrice.toStringAsFixed(2)}',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 16,
+                                    color: AppTheme.textDark,
                                   ),
                                 ),
                               ],
                             ),
                           ],
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios,
+                          color: AppTheme.textLight,
+                          size: 16,
                         ),
                         onTap: () {
                           Navigator.push(
