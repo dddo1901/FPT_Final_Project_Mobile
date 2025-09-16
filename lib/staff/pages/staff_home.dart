@@ -75,6 +75,13 @@ class StaffHome extends StatelessWidget {
               color: Colors.purple,
               onTap: () => _go(context, '/staff/orders'),
             ),
+            _StaffCard(
+              icon: Icons.assignment,
+              title: 'Requests',
+              subtitle: 'Leave, swap & overtime',
+              color: Colors.deepOrange,
+              onTap: () => _go(context, '/staff/requests'),
+            ),
           ],
         ),
       ),

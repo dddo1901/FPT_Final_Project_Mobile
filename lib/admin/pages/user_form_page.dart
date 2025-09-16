@@ -96,33 +96,33 @@ class _UserFormPageState extends State<UserFormPage> {
 
   // ===== Validators =====
   String? _notEmpty(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'Không được để trống' : null;
+      (v == null || v.trim().isEmpty) ? 'Cannot be empty' : null;
 
   String? _email(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Email bắt buộc';
+    if (v == null || v.trim().isEmpty) return 'Email is required';
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)
         ? null
-        : 'Email không hợp lệ';
+        : 'Invalid email format';
   }
 
   String? _phone(String? v) => (v == null || !RegExp(r'^\d{10}$').hasMatch(v))
-      ? 'Số điện thoại 10 số'
+      ? 'Phone number must be 10 digits'
       : null;
 
   String? _password(String? v) {
-    // Edit: cho phép bỏ qua nếu không đổi pass
+    // Edit: allow empty if editing existing user (no password change)
     if (widget.initialUser != null && (v == null || v.isEmpty)) return null;
-    if (v == null || v.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
-    if (!RegExp(r'(?=.*[0-9])').hasMatch(v)) return 'Cần ít nhất 1 chữ số';
-    if (!RegExp(r'(?=.*[A-Za-z])').hasMatch(v)) return 'Cần ít nhất 1 chữ cái';
+    if (v == null || v.length < 6) return 'Password minimum 6 characters';
+    if (!RegExp(r'(?=.*[0-9])').hasMatch(v)) return 'Need at least 1 number';
+    if (!RegExp(r'(?=.*[A-Za-z])').hasMatch(v)) return 'Need at least 1 letter';
     return null;
   }
 
   String? _confirm(String? v) {
-    // Chỉ check khi password hợp lệ hoặc đang tạo mới
+    // Only check when password is valid or creating new user
     final pwErr = _password(_passwordC.text);
     if (pwErr == null && v != _passwordC.text) {
-      return 'Xác nhận mật khẩu không khớp';
+      return 'Password confirmation does not match';
     }
     return null;
   }
@@ -139,6 +139,9 @@ class _UserFormPageState extends State<UserFormPage> {
       email: _emailC.text.trim(),
       phone: _phoneC.text.trim(),
       role: _role,
+      isActive:
+          widget.initialUser?.isActive ??
+          true, // Default to active for new users
       imageUrl:
           widget.initialUser?.imageUrl, // giữ nguyên nếu edit mà không đổi ảnh
       staffProfile: _role == 'STAFF'
@@ -290,10 +293,6 @@ class _UserFormPageState extends State<UserFormPage> {
                     items: const [
                       DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN')),
                       DropdownMenuItem(value: 'STAFF', child: Text('STAFF')),
-                      DropdownMenuItem(
-                        value: 'SHIPPER',
-                        child: Text('SHIPPER'),
-                      ),
                     ],
                     onChanged: (v) => setState(() => _role = v ?? 'STAFF'),
                     decoration: const InputDecoration(labelText: 'Role'),

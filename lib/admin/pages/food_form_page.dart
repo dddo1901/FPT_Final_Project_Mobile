@@ -65,11 +65,11 @@ class _FoodFormPageState extends State<FoodFormPage> {
   }
 
   String? _req(String? v) =>
-      (v == null || v.trim().isEmpty) ? 'Không được để trống' : null;
+      (v == null || v.trim().isEmpty) ? 'Cannot be empty' : null;
   String? _price(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Không được để trống';
+    if (v == null || v.trim().isEmpty) return 'Cannot be empty';
     final x = double.tryParse(v);
-    if (x == null || x < 0) return 'Giá không hợp lệ';
+    if (x == null || x < 0) return 'Invalid price';
     return null;
   }
 

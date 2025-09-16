@@ -41,15 +41,6 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
     }
   }
 
-  Future<void> _goEdit() async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/foods/edit',
-      arguments: widget.foodId,
-    );
-    if (ok == true) await _refresh();
-  }
-
   @override
   Widget build(BuildContext context) {
     final m = _m;
@@ -63,17 +54,11 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         m?.name ?? '—',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      FilledButton.icon(
-                        onPressed: _goEdit,
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit'),
                       ),
                     ],
                   ),

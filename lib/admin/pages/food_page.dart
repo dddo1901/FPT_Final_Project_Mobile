@@ -7,7 +7,7 @@ class FoodPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Food Page')),
-      body: Center(child: Text('Danh sách món ăn')),
+      body: Center(child: Text('Food Menu')),
     );
   }
 }

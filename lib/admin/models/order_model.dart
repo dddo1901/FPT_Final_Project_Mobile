@@ -56,6 +56,29 @@ class OrderModel {
           : null,
     );
   }
+
+  // Convenience to clone with overrides (currently used for fallback dine-in items)
+  OrderModel copyWith({
+    List<FoodOrder>? foodList,
+    String? status,
+    double? totalPrice,
+  }) {
+    return OrderModel(
+      id: id,
+      orderNumber: orderNumber,
+      status: status ?? this.status,
+      totalPrice: totalPrice ?? this.totalPrice,
+      createdAt: createdAt,
+      customer: customer,
+      staff: staff,
+      foodList: foodList ?? this.foodList,
+      deliveryStatus: deliveryStatus,
+      deliveryAddress: deliveryAddress,
+      recipientName: recipientName,
+      recipientPhone: recipientPhone,
+      paymentMethod: paymentMethod,
+    );
+  }
 }
 
 // Thêm model cho PaymentMethod
@@ -91,6 +114,25 @@ class FoodOrder {
       quantity: _asInt(e.quantity) ?? 1,
       price: _asDouble(e.price),
     );
+  }
+
+  // Factory for dine-in orderItems from fallback API
+  factory FoodOrder.fromDineInItem(Map<String, dynamic> item) {
+    return FoodOrder(
+      id: item['id']?.toString() ?? '',
+      name:
+          item['name']?.toString() ?? item['foodName']?.toString() ?? 'Unknown',
+      quantity: _asInt(item['quantity']) ?? 1,
+      price: _asDouble(item['price'] ?? 0.0),
+    );
+  }
+
+  // Helper to convert List<dynamic> from dine-in API to List<FoodOrder>
+  static List<FoodOrder> fromDineInItems(List<dynamic> items) {
+    return items
+        .where((item) => item is Map<String, dynamic>)
+        .map((item) => FoodOrder.fromDineInItem(item as Map<String, dynamic>))
+        .toList();
   }
 }
 

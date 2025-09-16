@@ -44,20 +44,6 @@ class _TableDetailPageState extends State<TableDetailPage> {
     }
   }
 
-  Future<void> _goEdit(String id) async {
-    final ok = await Navigator.pushNamed(
-      context,
-      '/admin/tables/edit',
-      arguments: id,
-    );
-    if (!mounted) return;
-    if (ok == true) {
-      await _refresh(); // ✅ sau edit xong, load lại detail ngay
-      // Optionally: trả true lên List nếu user “back” khỏi Detail sau đó
-      // (không bắt buộc, vì list đã tự reload khi quay lại trước đó)
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final m = _model;
@@ -72,17 +58,11 @@ class _TableDetailPageState extends State<TableDetailPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         (m?.title ?? 'Table #${widget.tableId}'),
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      FilledButton.icon(
-                        onPressed: () => _goEdit(m?.id ?? widget.tableId),
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit'),
                       ),
                     ],
                   ),

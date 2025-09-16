@@ -11,6 +11,9 @@ import 'routes/app_routes.dart';
 
 import 'admin/services/user_service.dart';
 import 'admin/services/table_service.dart';
+import 'admin/services/request_service.dart';
+import 'common/providers/notification_provider.dart';
+import 'common/widgets/notification_overlay.dart';
 
 const kBaseUrl = 'http://10.0.2.2:8080';
 
@@ -25,6 +28,9 @@ void main() {
         ChangeNotifierProvider(
           create: (_) => AuthProvider(const FlutterSecureStorage())..load(),
         ),
+
+        // Notification provider
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
 
         // ApiService dùng TokenClient (middleware gắn token)
         ProxyProvider<AuthProvider, ApiService>(
@@ -59,6 +65,9 @@ void main() {
           update: (_, api, __) =>
               FoodService(baseUrl: kBaseUrl, client: api.client),
         ),
+        ProxyProvider<ApiService, RequestService>(
+          update: (_, api, __) => RequestService(api),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -77,6 +86,9 @@ class MyApp extends StatelessWidget {
       routes: appRoutes,
       onGenerateRoute: onGenerateRoute,
       onUnknownRoute: onUnknownRoute, // Add this line
+      builder: (context, child) {
+        return NotificationOverlay(child: child ?? const SizedBox.shrink());
+      },
     );
   }
 }

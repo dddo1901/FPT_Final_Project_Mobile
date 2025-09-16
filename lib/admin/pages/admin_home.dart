@@ -7,20 +7,18 @@ class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
   void _go(BuildContext context, String route, {Object? args}) {
-    debugPrint(
-      '➡️ AdminHome._go: route=$route args=$args',
-    ); // Thêm log để debug
+    debugPrint('➡️ AdminHome._go: route=$route args=$args'); // Add debug log
     try {
       final result = Navigator.pushNamed(context, route, arguments: args);
       result.then(
-        (value) => debugPrint('✅ Điều hướng thành công: $route'),
-        onError: (error) => debugPrint('❌ Điều hướng thất bại: $error'),
+        (value) => debugPrint('✅ Navigation successful: $route'),
+        onError: (error) => debugPrint('❌ Navigation failed: $error'),
       );
     } catch (e) {
-      debugPrint('❌ Lỗi điều hướng: $e');
+      debugPrint('❌ Navigation error: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi điều hướng: $e')));
+      ).showSnackBar(SnackBar(content: Text('Navigation error: $e')));
     }
   }
 
@@ -69,7 +67,7 @@ class AdminHome extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          childAspectRatio: 1.0,
+          childAspectRatio: 1.1,
           children: [
             _AdminCard(
               icon: Icons.group,
@@ -98,6 +96,41 @@ class AdminHome extends StatelessWidget {
               subtitle: 'View & manage',
               color: Colors.purple,
               onTap: () => _go(context, '/admin/orders'),
+            ),
+            _AdminCard(
+              icon: Icons.people,
+              title: 'Customers',
+              subtitle: 'Customer list',
+              color: Colors.blue,
+              onTap: () => _go(context, '/admin/customers'),
+            ),
+            _AdminCard(
+              icon: Icons.card_giftcard,
+              title: 'Vouchers',
+              subtitle: 'Manage vouchers',
+              color: Colors.pink,
+              onTap: () => _go(context, '/admin/vouchers'),
+            ),
+            _AdminCard(
+              icon: Icons.chat_bubble_outline,
+              title: 'Chatbot',
+              subtitle: 'Sessions & FAQ',
+              color: Colors.indigo,
+              onTap: () => _go(context, '/admin/chatbot'),
+            ),
+            _AdminCard(
+              icon: Icons.assignment,
+              title: 'Requests',
+              subtitle: 'Staff requests',
+              color: Colors.deepOrange,
+              onTap: () => _go(context, '/admin/requests'),
+            ),
+            _AdminCard(
+              icon: Icons.notifications_active,
+              title: 'Notifications',
+              subtitle: 'Test notifications',
+              color: Colors.purple,
+              onTap: () => _go(context, '/notification-demo'),
             ),
           ],
         ),
@@ -176,6 +209,22 @@ class _AdminDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 onNavigate('/admin/orders');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Customers'),
+              onTap: () {
+                Navigator.pop(context);
+                onNavigate('/admin/customers');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.card_giftcard),
+              title: const Text('Vouchers'),
+              onTap: () {
+                Navigator.pop(context);
+                onNavigate('/admin/vouchers');
               },
             ),
             const Divider(height: 1),

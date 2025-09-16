@@ -18,7 +18,7 @@ class NotFoundPage extends StatelessWidget {
               onPressed: () => Navigator.of(
                 context,
               ).pushNamedAndRemoveUntil('/admin', (r) => false),
-              child: const Text('Về trang Admin'),
+              child: const Text('Go to Admin'),
             ),
           ],
         ),

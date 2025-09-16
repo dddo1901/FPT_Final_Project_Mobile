@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fpt_final_project_mobile/admin/models/user_model.dart';
 import 'package:fpt_final_project_mobile/admin/services/user_service.dart';
 import 'package:provider/provider.dart';
+import '../../auths/api_service.dart';
 
 class UserListPage extends StatefulWidget {
   const UserListPage({super.key});
@@ -26,17 +27,78 @@ class _UserListPageState extends State<UserListPage> {
     });
   }
 
-  void _goCreate() {
-    Navigator.pushNamed(context, '/admin/users/create').then((_) => _reload());
+  Future<void> _toggleUserStatus(UserModel user) async {
+    // Show confirmation dialog first
+    _showToggleDialog(user);
   }
 
-  void _goDetail(String id) {
-    debugPrint('🔧 _goDetail called with id: $id');
-    Navigator.pushNamed(
-      context,
-      '/admin/users/detail',
-      arguments: id,
-    ).then((_) => _reload());
+  Future<void> _performToggleUserStatus(UserModel user) async {
+    try {
+      final api = context.read<ApiService>();
+      final response = await api.client.put(
+        Uri.parse('${api.baseUrl}/api/auth/users/${user.id}/toggle-status'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // Refresh the list
+        await _reload();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'User ${user.isActive ? "deactivated" : "activated"} successfully',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to toggle status: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('[TOGGLE USER STATUS ERROR] $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update user status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showToggleDialog(UserModel user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Action'),
+        content: Text(
+          'Are you sure you want to ${user.isActive ? "deactivate" : "activate"} '
+          '${user.name}?\n\n'
+          '${user.isActive ? "Deactivating will prevent this user from logging in and accessing the system." : "Activating will restore this user\'s access to the system."}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performToggleUserStatus(user);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: user.isActive ? Colors.red : Colors.green,
+            ),
+            child: Text(user.isActive ? 'Deactivate' : 'Activate'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -46,11 +108,6 @@ class _UserListPageState extends State<UserListPage> {
         title: const Text('Users'),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
-          FilledButton.tonalIcon(
-            onPressed: _goCreate,
-            icon: const Icon(Icons.add),
-            label: const Text('Add'),
-          ),
         ],
       ),
       body: Column(
@@ -102,9 +159,42 @@ class _UserListPageState extends State<UserListPage> {
                                 : '?',
                           ),
                         ),
-                        title: Text(u.name),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                u.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: u.isActive
+                                    ? Colors.green.shade100
+                                    : Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                u.isActive ? 'Active' : 'Inactive',
+                                style: TextStyle(
+                                  color: u.isActive
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         subtitle: Text('${u.email} • ${u.role}'),
-                        onTap: () => _goDetail(u.id),
+                        onTap: () => _toggleUserStatus(u),
                       );
                     },
                   ),

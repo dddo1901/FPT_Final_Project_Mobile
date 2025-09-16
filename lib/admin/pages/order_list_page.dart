@@ -64,7 +64,7 @@ class _OrderListPageState extends State<OrderListPage> {
     return entities.map(OrderModel.fromEntity).toList();
   }
 
-  String _fmtMoney(double v) => '${v.toStringAsFixed(0)}đ';
+  String _fmtMoney(double v) => '\$${(v / 25000).toStringAsFixed(2)}';
   String _fmtDate(DateTime d) =>
       '${d.day}/${d.month}/${d.year} ${d.hour}:${d.minute}';
 

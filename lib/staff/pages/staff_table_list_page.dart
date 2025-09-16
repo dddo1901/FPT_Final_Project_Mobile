@@ -41,7 +41,7 @@ class _StaffTableListPageState extends State<StaffTableListPage> {
 
   Future<void> _onRefresh() => _fetch();
 
-  // Staff chỉ có thể xem detail
+  // Staff can only view details
   Future<void> _goDetail(String id) async {
     await Navigator.pushNamed(
       context,

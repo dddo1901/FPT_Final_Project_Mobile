@@ -68,9 +68,9 @@ class _TableFormPageState extends State<TableFormPage> {
   }
 
   String? _posInt(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Không được để trống';
+    if (v == null || v.trim().isEmpty) return 'Cannot be empty';
     final x = int.tryParse(v);
-    if (x == null || x <= 0) return 'Phải là số nguyên dương';
+    if (x == null || x <= 0) return 'Must be positive integer';
     return null;
   }
 

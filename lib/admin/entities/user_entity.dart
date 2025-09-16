@@ -6,6 +6,7 @@ class UserEntity {
   final String phone;
   final String? imageUrl;
   final String role;
+  final bool isActive;
 
   UserEntity({
     required this.id,
@@ -15,6 +16,7 @@ class UserEntity {
     required this.phone,
     this.imageUrl,
     required this.role,
+    required this.isActive,
   });
 
   @override

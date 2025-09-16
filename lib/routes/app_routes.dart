@@ -7,6 +7,13 @@ import 'package:fpt_final_project_mobile/admin/pages/food_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/food_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_detail_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/order_management_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/customer_list_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/voucher_management_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/chatbot_management_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/request_management_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/request_create_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/staff_request_list_page.dart';
+import 'package:fpt_final_project_mobile/admin/pages/notification_demo_page.dart';
 
 import 'package:fpt_final_project_mobile/admin/pages/user_list_page.dart';
 import 'package:fpt_final_project_mobile/admin/pages/user_form_page.dart';
@@ -25,6 +32,10 @@ import 'package:fpt_final_project_mobile/staff/pages/staff_home.dart';
 import 'package:fpt_final_project_mobile/staff/pages/staff_food_list_page.dart';
 import 'package:fpt_final_project_mobile/staff/pages/staff_table_list_page.dart';
 import 'package:fpt_final_project_mobile/staff/pages/staff_order_list_page.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_order_detail_page.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_dinein_order_detail_page.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_takeaway_order_detail_page.dart';
+import 'package:fpt_final_project_mobile/staff/pages/staff_delivery_order_detail_page.dart';
 import 'package:provider/provider.dart';
 
 // ==================== STATIC ROUTES (no arguments) ====================
@@ -81,6 +92,35 @@ final Map<String, WidgetBuilder> appRoutes = {
   // 🔐 Admin Orders
   '/admin/orders': (_) =>
       const RoleGuard(allowed: ['ADMIN'], child: OrderManagementPage()),
+
+  // 🔐 Admin Customers
+  '/admin/customers': (_) =>
+      const RoleGuard(allowed: ['ADMIN'], child: CustomerListPage()),
+
+  // 🔐 Admin Vouchers
+  '/admin/vouchers': (_) =>
+      const RoleGuard(allowed: ['ADMIN'], child: VoucherManagementPage()),
+
+  // 🔐 Admin Chatbot
+  '/admin/chatbot': (_) =>
+      const RoleGuard(allowed: ['ADMIN'], child: ChatbotManagementPage()),
+
+  // 🔐 Admin Request Management
+  '/admin/requests': (_) =>
+      const RoleGuard(allowed: ['ADMIN'], child: RequestManagementPage()),
+
+  // 🔐 Staff Request Management
+  '/staff/requests': (_) =>
+      const RoleGuard(allowed: ['STAFF'], child: StaffRequestListPage()),
+
+  '/staff/request/create': (_) =>
+      const RoleGuard(allowed: ['STAFF'], child: RequestCreatePage()),
+
+  // 🔐 Notification Demo (for both admin and staff)
+  '/notification-demo': (_) => const RoleGuard(
+    allowed: ['ADMIN', 'STAFF'],
+    child: NotificationDemoPage(),
+  ),
 
   // ==================== STAFF ====================
 
@@ -243,6 +283,73 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         builder: (_) => RoleGuard(
           allowed: const ['ADMIN'],
           child: OrderDetailPage(orderId: orderId),
+        ),
+      );
+    case '/staff/orders/detail':
+      final orderId = arguments as String?;
+      if (orderId == null || orderId.isEmpty) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) =>
+              const NotFoundPage(routeName: 'Staff order detail - missing ID'),
+        );
+      }
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => RoleGuard(
+          allowed: const ['STAFF'],
+          child: StaffOrderDetailPage(orderId: orderId),
+        ),
+      );
+    case '/staff/orders/dinein/detail':
+      final orderId = arguments as String?;
+      if (orderId == null || orderId.isEmpty) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const NotFoundPage(
+            routeName: 'Dine-In order detail - missing ID',
+          ),
+        );
+      }
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => RoleGuard(
+          allowed: const ['STAFF'],
+          child: StaffDineInOrderDetailPage(orderId: orderId),
+        ),
+      );
+    case '/staff/orders/takeaway/detail':
+      final orderId = arguments as String?;
+      if (orderId == null || orderId.isEmpty) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const NotFoundPage(
+            routeName: 'Take-Away order detail - missing ID',
+          ),
+        );
+      }
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => RoleGuard(
+          allowed: const ['STAFF'],
+          child: StaffTakeAwayOrderDetailPage(orderId: orderId),
+        ),
+      );
+    case '/staff/orders/delivery/detail':
+      final orderId = arguments as String?;
+      if (orderId == null || orderId.isEmpty) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const NotFoundPage(
+            routeName: 'Delivery order detail - missing ID',
+          ),
+        );
+      }
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => RoleGuard(
+          allowed: const ['STAFF'],
+          child: StaffDeliveryOrderDetailPage(orderId: orderId),
         ),
       );
   }

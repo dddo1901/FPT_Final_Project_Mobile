@@ -136,4 +136,16 @@ class UserService {
     }
     throw Exception('GET current user -> ${res.statusCode}: $body');
   }
+
+  Future<void> toggleUserStatus(String id) async {
+    final res = await client.put(
+      Uri.parse('$baseUrl/api/auth/users/$id/toggle-status'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (!_ok(res.statusCode)) {
+      throw Exception(
+        'Toggle user status failed: ${res.statusCode} ${_decode(res)}',
+      );
+    }
+  }
 }
