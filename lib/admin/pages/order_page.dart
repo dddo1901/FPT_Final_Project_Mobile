@@ -7,7 +7,7 @@ class OrderPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Order Page')),
-      body: Center(child: Text('Danh sách đơn hàng')),
+      body: Center(child: Text('Order List')),
     );
   }
 }

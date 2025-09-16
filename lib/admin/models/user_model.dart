@@ -11,6 +11,7 @@ class UserModel extends UserEntity {
     required super.email,
     required super.phone,
     required super.role,
+    required super.isActive,
     super.imageUrl,
     this.staffProfile,
   });
@@ -25,6 +26,7 @@ class UserModel extends UserEntity {
       email: json['email'] as String,
       phone: json['phone'] as String,
       role: json['role'] as String,
+      isActive: json['isActive'] ?? true,
       imageUrl: json['imageUrl'] as String?,
       staffProfile: json['staffProfile'] != null
           ? StaffProfileModel.fromJson(
@@ -43,6 +45,7 @@ class UserModel extends UserEntity {
       'email': email,
       'phone': phone,
       'role': role,
+      'isActive': isActive,
       'imageUrl': imageUrl,
       // Nếu staffProfile null thì JSON cũng null
       'staffProfile': staffProfile?.toJson(),
